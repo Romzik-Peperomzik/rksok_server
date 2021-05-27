@@ -106,7 +106,7 @@ class RKSOKPhoneBook:
     def _send_request(self) -> str:
         """Sends request to RKSOK server and return response as string."""
         request_body = self._get_request_body()  # Формируем тело запроса в бинарном виде.
-        self._raw_request = request_body.decode(ENCODING)  # Сохраняем раскодированный запрос.
+        self._raw_request = request_body.decode(ENCODING)  # Сохраняем раскодированный непосланный запрос.
         if not self._conn:  # Если соединения нет, то устанавливаем.
             self._conn = socket.create_connection((self._server, self._port))
         self._conn.sendall(request_body)  # Отправляем запрос в бинарном виде.
@@ -115,10 +115,10 @@ class RKSOKPhoneBook:
 
     def _get_request_body(self) -> bytes:
         """Composes RKSOK request, returns it as bytes"""
-        request = f"{self._verb.value} {self._name.strip()} {PROTOCOL}\r\n"
-        if self._phone: request += f"{self._phone.strip()}\r\n"
-        request += "\r\n"
-        return request.encode(ENCODING)
+        request = f"{self._verb.value} {self._name.strip()} {PROTOCOL}\r\n"  # Тип, имя, протокол для запроса.
+        if self._phone: request += f"{self._phone.strip()}\r\n"  # Телефон если есть.
+        request += "\r\n"  # Спец символы определяющие конец запроса.
+        return request.encode(ENCODING)  # Переводим запрос в бинарные данные.
 
     def _parse_response(self, raw_response: str) -> str:
         """Parses response from RKSOK server and returns parsed data"""
@@ -208,7 +208,7 @@ def run_client() -> None:
                 "серверу и порту")
 
     verb = MODE_TO_VERB.get(get_mode())  # Возвращает режим выбранный пользователем.
-    client.set_verb(verb)  # Сохраняем режим в инстанс клиента.
+    client.set_verb(verb)  # Сохраняем метод запроса в инстанс клиента.
     client.set_name(input("Введи имя: "))  # Получаем имя для запроса, обязательно для всех режимов.
     if verb == RequestVerb.WRITE:  # Если запрос на запись, то запрашиваем телефон.
         client.set_phone(input("Введи телефон: "))
