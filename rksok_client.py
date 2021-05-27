@@ -91,8 +91,8 @@ class RKSOKPhoneBook:
     def process(self):
         """ Processes communication with RKSOK server — sends request,
             parses response"""
-        raw_response = self._send_request()
-        human_response = self._parse_response(raw_response)
+        raw_response = self._send_request()  # Получили декодированный ответ от сервера на наш запрос.
+        human_response = self._parse_response(raw_response)  # Распаршенный ответ в человеко-читаемом состоянии.
         return human_response
 
     def get_raw_request(self) -> Optional[str]:
@@ -105,13 +105,13 @@ class RKSOKPhoneBook:
 
     def _send_request(self) -> str:
         """Sends request to RKSOK server and return response as string."""
-        request_body = self._get_request_body()
-        self._raw_request = request_body.decode(ENCODING)
-        if not self._conn:
+        request_body = self._get_request_body()  # Формируем тело запроса в бинарном виде.
+        self._raw_request = request_body.decode(ENCODING)  # Сохраняем раскодированный запрос.
+        if not self._conn:  # Если соединения нет, то устанавливаем.
             self._conn = socket.create_connection((self._server, self._port))
-        self._conn.sendall(request_body)
-        self._raw_response = self._receive_response_body()
-        return self._raw_response
+        self._conn.sendall(request_body)  # Отправляем запрос в бинарном виде.
+        self._raw_response = self._receive_response_body()  # Принимаем ответ от сервера в бинарном виде.
+        return self._raw_response  # Возвращаем декодированный ответ от сервера.
 
     def _get_request_body(self) -> bytes:
         """Composes RKSOK request, returns it as bytes"""
@@ -122,26 +122,27 @@ class RKSOKPhoneBook:
 
     def _parse_response(self, raw_response: str) -> str:
         """Parses response from RKSOK server and returns parsed data"""
-        for response_status in ResponseStatus:
-            if raw_response.startswith(f"{response_status.value} "):
-                break
+        for response_status in ResponseStatus:  # Проверяем какой ответ пришёл от сервера.
+            if raw_response.startswith(f"{response_status.value} "):  # "НОРМАЛДЫКС"/"НИНАШОЛ"/"НИЛЬЗЯ"/"НИПОНЯЛ"
+                break  # Если нужный найдет прерываем поиск.
         else:
-            raise CanNotParseResponseError()
-        response_payload = "".join(raw_response.split("\r\n")[1:])
-        if response_status == ResponseStatus.NOT_APPROVED:
-            response_payload = f"\nКомментарий органов: {response_payload}"
+            raise CanNotParseResponseError()  # Если не найдено, то бросаем Exception.
+        response_payload = "".join(raw_response.split("\r\n")[1:])  # Данные без заголовка. тел/уже едем
+        if response_status == ResponseStatus.NOT_APPROVED:  # Если сервер проверки запретил обработку запроса.
+            response_payload = f"\nКомментарий органов: {response_payload}"  # Добавляем к данным строку.
         return HUMAN_READABLE_ANSWERS.get(self._verb).get(response_status) \
-            .format(name=self._name, payload=response_payload)
+            .format(name=self._name, payload=response_payload)  # Возвращаем человеко-читаемое 
+                                      # представление ответа подставляя имя и данные из ответа.
 
     def _receive_response_body(self) -> str:
         """ Receives data from socket connection and returns it as string,
             decoded using ENCODING"""
         response = b""
         while True:
-            data = self._conn.recv(1024)
-            if not data: break
-            response += data
-        return response.decode(ENCODING)
+            data = self._conn.recv(1024)  # Принимаем ответ от сервера длиною 1024 байта.
+            if not data: break  # Если ответа нет, обрываем цикл while.
+            response += data  # Сохраняем ответ в бинарном виде.
+        return response.decode(ENCODING)  # Возвращаем декодированный ответ от сервера.
 
 
 def get_server_and_port() -> tuple[str, int]:
@@ -191,7 +192,7 @@ def process_critical_exception(message: str):
 def run_client() -> None:
     """Asks all needed data from client and process his query."""
     try:
-        server, port = get_server_and_port()
+        server, port = get_server_and_port()  # Дергаём сервер и порт из командной строки.
     except NotSpecifiedIPOrPortError:
         process_critical_exception(
             "Упс! Меня запускать надо так:\n\n"
@@ -201,26 +202,26 @@ def run_client() -> None:
             "python3.9 rksok_client.py my-rksok-server.ru 5555\n")
 
     try:
-        client = RKSOKPhoneBook(server, port)
+        client = RKSOKPhoneBook(server, port)  # Создаём клиента с его записной книгой.
     except ConnectionRefusedError:
         process_critical_exception("Не могу подключиться к указанному "
                 "серверу и порту")
 
-    verb = MODE_TO_VERB.get(get_mode())
-    client.set_verb(verb)
-    client.set_name(input("Введи имя: "))
-    if verb == RequestVerb.WRITE:
+    verb = MODE_TO_VERB.get(get_mode())  # Возвращает режим выбранный пользователем.
+    client.set_verb(verb)  # Сохраняем режим в инстанс клиента.
+    client.set_name(input("Введи имя: "))  # Получаем имя для запроса, обязательно для всех режимов.
+    if verb == RequestVerb.WRITE:  # Если запрос на запись, то запрашиваем телефон.
         client.set_phone(input("Введи телефон: "))
 
     try:
-        human_readable_response = client.process()
-    except CanNotParseResponseError:
+        human_readable_response = client.process()  # Распаршенный ответ в человеко-читаемом состоянии.
+    except CanNotParseResponseError:  # Ответ неправильный или неверно обработан.
         process_critical_exception(
             "Не смог разобрать ответ от сервера РКСОК:("
-        )
-    print(f"\nЗапрос: {client.get_raw_request()!r}\n"
-          f"Ответ:{client.get_raw_response()!r}\n")
-    print(human_readable_response)
+        )                                     #!r - выбирает repr() для форматирования.
+    print(f"\nЗапрос: {client.get_raw_request()!r}\n"  # Печатаем раскодированные запрос
+          f"Ответ:{client.get_raw_response()!r}\n")    # и ответ от сервера.
+    print(human_readable_response)  # Печатет распаршенный запрос с ответом от сервера.
 
 
 if __name__ == "__main__":
