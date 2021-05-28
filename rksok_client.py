@@ -139,7 +139,7 @@ class RKSOKPhoneBook:
             decoded using ENCODING"""
         response = b""
         while True:
-            data = self._conn.recv(1024)  # Принимаем ответ от сервера длиною 1024 байта.
+            data = self._conn.recv(1024)  # Сокет ожидает данных от сервера.
             if not data: break  # Если ответа нет, обрываем цикл while.
             response += data  # Сохраняем ответ в бинарном виде.
         return response.decode(ENCODING)  # Возвращаем декодированный ответ от сервера.
