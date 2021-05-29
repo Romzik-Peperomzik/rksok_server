@@ -1,5 +1,9 @@
 import socket
 from enum import Enum
+from base64 import b64encode
+
+PROTOCOL = "РКСОК/1.0"
+ENCODING = "UTF-8" 
 
 
 class CanNotParseResponseError(Exception):
@@ -12,9 +16,7 @@ ru_verbs_list = {"ОТДОВАЙ": 'GET',
                  "УДОЛИ": 'DELETE',
                  "ЗОПИШИ": 'WRITE'}
 
-PROTOCOL = "РКСОК/1.0"
-ENCODING = "UTF-8"  
-
+ 
 def parse_response(conn: str) -> str:
     """ Processing client response
         Args:
@@ -24,15 +26,43 @@ def parse_response(conn: str) -> str:
         Returns:
             str: [description]"""    
     data = f'{conn.recv(1024).decode(ENCODING)}'
-    for ru_verb in ru_verbs_list:
+    for ru_verb in ru_verbs_list:  # Узнаём какая именно команда пришла.
         if data.startswith(ru_verb):
             break
     else:
         raise CanNotParseResponseError()  
 
-    validation_request = get_validation_body(data)
-    return send_valid_request(validation_request)
-    
+    validation_request = get_validation_body(data)  # Идём узнавать у сервера проверки.
+    validation_response = send_validation_request(validation_request)
+
+    if validation_response.startswith('МОЖНА') and \
+    len(data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) <= 30:    
+        response = f'НОРМАЛДЫКС РКСОК/1.0\r\n\r\n'
+        if ru_verb == 'ЗОПИШИ':
+            writing_new_user(data)
+            return response
+        elif ru_verb == 'ОТДОВАЙ':
+            pass
+        else:
+            pass
+        
+        conn.send(response.encode(ENCODING))
+        conn.shutdown(socket.SHUT_RDWR)
+    else:
+        
+        pass
+
+
+def writing_new_user(data):
+    """ Writing new userfile.
+        Args:
+            data: Data from client response."""
+    name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
+    encode_name = b64encode(name.encode("UTF-8")).decode()
+    print(encode_name)
+    with open(f"{encode_name}", 'x', encoding='utf-8') as f:
+        f.write(data.split('\r\n', 1)[1])
+
 
 def get_validation_body(decoded_data: str) -> bytes:
     """ Composes validation request.
@@ -41,11 +71,11 @@ def get_validation_body(decoded_data: str) -> bytes:
         Returns:
             bytes: Encoded request"""
     request = f"АМОЖНА? {PROTOCOL}\r\n{decoded_data}"
-    request += "\r\n"
+    request += "\r\n"  #TODO: Надо понять нужен ли тут доп. отступ.
     return request.encode(ENCODING)
 
 
-def send_valid_request(request_body: bytes) -> str:
+def send_validation_request(request_body: bytes) -> str:
     """ Send validation request and receive valid response.
         Args:
             request_body (bytes): Body request.
@@ -53,11 +83,11 @@ def send_valid_request(request_body: bytes) -> str:
             str: Decoded valid response."""
     valid_conn = socket.create_connection(('vragi-vezde.to.digital', 51624))
     valid_conn.sendall(request_body)
-    valid_response = receive_response_body(valid_conn)
+    valid_response = receive_validation_response(valid_conn)
     return valid_response  
 
 
-def receive_response_body(valid_conn) -> str:
+def receive_validation_response(valid_conn) -> str:
         """ Receives data from socket connection and returns it as string,
             decoded using ENCODING"""
         response = b""
@@ -66,6 +96,7 @@ def receive_response_body(valid_conn) -> str:
             if not data: break
             response += data
         return response.decode(ENCODING)  # Возвращаем декодированный ответ от сервера.
+
 
 def run_server() -> None:
     """Waiting for a client and proceed client request."""
@@ -76,13 +107,6 @@ def run_server() -> None:
     print('Got new connection')
     valid_or_not_response = parse_response(conn)
 
-    if valid_or_not_response.startswith('МОЖНА'):
-        # Опиши логику если можно обработать
-        response = f'НОРМАЛДЫКС РКСОК/1.0\r\n812334554\r\n\r\n'
-        conn.send(response.encode(ENCODING))
-        conn.shutdown(socket.SHUT_RDWR)
-    else:
-        # А здесь если нельзя
-        pass
+    
     
 # server.close()
