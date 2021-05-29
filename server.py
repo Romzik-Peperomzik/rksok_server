@@ -17,7 +17,7 @@ ru_verbs_list = {"ОТДОВАЙ": 'GET',
                  "ЗОПИШИ": 'WRITE'}
 
  
-def parse_response(conn: str) -> str:
+def parse_response(data: str) -> str:
     """ Processing client response
         Args:
             raw_response (str): Запрос.
@@ -25,7 +25,6 @@ def parse_response(conn: str) -> str:
             CanNotParseResponseError: Ошибка если команду запроса неудалось обработать.
         Returns:
             str: [description]"""    
-    data = f'{conn.recv(1024).decode(ENCODING)}'
     for ru_verb in ru_verbs_list:  # Узнаём какая именно команда пришла.
         if data.startswith(ru_verb):
             break
@@ -34,7 +33,7 @@ def parse_response(conn: str) -> str:
 
     validation_request = get_validation_body(data)  # Идём узнавать у сервера проверки.
     validation_response = send_validation_request(validation_request)
-
+    print('Всё проверил, можно падать.')
     if validation_response.startswith('МОЖНА') and \
     len(data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) <= 30:    
         response = f'НОРМАЛДЫКС РКСОК/1.0\r\n\r\n'
@@ -45,9 +44,7 @@ def parse_response(conn: str) -> str:
             pass
         else:
             pass
-        
-        conn.send(response.encode(ENCODING))
-        conn.shutdown(socket.SHUT_RDWR)
+                
     else:
         
         pass
@@ -81,7 +78,7 @@ def send_validation_request(request_body: bytes) -> str:
             request_body (bytes): Body request.
         Returns:
             str: Decoded valid response."""
-    valid_conn = socket.create_connection(('vragi-vezde.to.digital', 51624))
+    valid_conn = socket.create_connection(('0.0.0.0', 3332))  # ('vragi-vezde.to.digital', 51624)
     valid_conn.sendall(request_body)
     valid_response = receive_validation_response(valid_conn)
     return valid_response  
@@ -105,8 +102,12 @@ def run_server() -> None:
     print('Waiting for connection...')
     conn, addr = server.accept()  # Объект для работы с клиентским сокетом. Адрес клиента.
     print('Got new connection')
-    valid_or_not_response = parse_response(conn)
+    data = f'{conn.recv(1024).decode(ENCODING)}'
+    valid_or_not_response = parse_response(data)
 
+    conn.send(valid_or_not_response.encode(ENCODING))
+    conn.shutdown(socket.SHUT_RDWR)
     
     
-# server.close()
+if __name__ == '__main__':
+    run_server()
