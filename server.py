@@ -1,6 +1,8 @@
 import socket
 from enum import Enum
 from base64 import b64encode
+from os import remove
+import time
 
 PROTOCOL = "РКСОК/1.0"
 ENCODING = "UTF-8" 
@@ -29,30 +31,43 @@ def parse_response(data: str) -> str:
         if data.startswith(ru_verb):
             break
     else:
-        raise CanNotParseResponseError()  
+        return f'НИПОНЯЛ РКСОК/1.0'
+    if len(data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
+        return f'НИПОНЯЛ РКСОК/1.0'
 
     validation_request = get_validation_body(data)  # Формируем запрос для сервера проверки.
     validation_response = send_validation_request(validation_request)  # Идём узнавать у сервера проверки.
     print('\nОтвет от сервера валидации получен.')
     
-    if validation_response.startswith('МОЖНА') and \
-    len(data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) <= 30:    
-        response = f'НОРМАЛДЫКС РКСОК/1.0'
+    if validation_response.startswith('МОЖНА'):
         if ru_verb == 'ЗОПИШИ':
-            print('Дошёл до записи абонента.')
-            writing_new_user(data)
-            return response
+            print('\nПытаюсь записать абонента в дб...')            
+            return writing_new_user(data)
         elif ru_verb == 'ОТДОВАЙ':
-            print('\nПытаюсь найти абонента в дб...')
-            response += f'\r\n{get_user(data)}'
-            print(f'Пользователь найден, ответ который верну клиенту:\r\n{response}')
-            return response
+            print('\nПытаюсь найти абонента в дб...')            
+            return get_user(data)
         else:
-            pass
+            print('\nПытаюсь удалить абонента из дб...')
+            return deleting_user(data)
                 
-    else:
-        
-        pass
+    else:        
+        print(validation_response)
+        return validation_response
+
+
+def deleting_user(data) -> None:
+    """Deleting user from data base.
+        Args:
+            data ([type]): Data from client response."""
+    name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
+    encode_name = b64encode(name.encode("UTF-8")).decode()
+    print(f'Имя пользователя в закодированном виде: {encode_name}')
+    try:
+        print('Пытаюсь удалить пользователя.')
+        remove(f"db/{encode_name}")
+        return f'НОРМАЛДЫКС РКСОК/1.0'
+    except FileExistsError:
+        return f'НИНАШОЛ РКСОК/1.0'
 
 
 def get_user(data) -> str:
@@ -66,7 +81,7 @@ def get_user(data) -> str:
         with open(f"db/{encode_name}", 'r', encoding='utf-8') as f:            
             user_data = f.read()
             print(user_data)
-        return user_data
+        return f'НОРМАЛДЫКС РКСОК/1.0\r\n{user_data}'
     except FileExistsError:
         return f'НИНАШОЛ РКСОК/1.0'
     
@@ -78,8 +93,12 @@ def writing_new_user(data) -> None:
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
     print(encode_name)
-    with open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
-        f.write(''.join(data.split('\r\n', 1)[1]))
+    try:
+        with open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
+            f.write(''.join(data.split('\r\n', 1)[1]))
+        return f'НОРМАЛДЫКС РКСОК/1.0'
+    except FileExistsError:
+        print('Кажется такой файл уже существует.')
 
 
 def get_validation_body(decoded_data: str) -> bytes:
@@ -120,19 +139,23 @@ def run_server() -> None:
     """Waiting for a client and proceed client request."""
     server = socket.create_server(("0.0.0.0", 3333))  # Принимаем любые запросы этой машины на порт 3333.
     server.listen(1)  # Длина очереди.
+    try:
+        while True:
+            print('Waiting for connection...')
+            conn, addr = server.accept()  # Объект для работы с клиентским сокетом. Адрес клиента.
 
-    print('Waiting for connection...')
-    conn, addr = server.accept()  # Объект для работы с клиентским сокетом. Адрес клиента.
+            print('Got new connection')
+            data = f'{conn.recv(1024).decode(ENCODING)}'
+            response_to_client = parse_response(data)
+            # time.sleep(15)
+            print('Отправил ответ в клиент.')
+            conn.send(response_to_client.encode(ENCODING))
 
-    print('Got new connection')
-    data = f'{conn.recv(1024).decode(ENCODING)}'
-    valid_or_not_response = parse_response(data)
-
-    print('Отправил ответ в клиент.')
-    conn.send(valid_or_not_response.encode(ENCODING))
-
-    print('Отключаюсь...')
-    conn.shutdown(socket.SHUT_RDWR)
+            print('Отключаюсь...')
+            conn.shutdown(socket.SHUT_RDWR)
+    except KeyboardInterrupt:
+        print('\nТы отключил сервер.')
+        server.close()
     
     
 if __name__ == '__main__':
