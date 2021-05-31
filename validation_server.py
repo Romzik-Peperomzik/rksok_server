@@ -1,4 +1,8 @@
 import socket
+from random import randint
+
+
+allow_or_not_list = ['МОЖНА РКСОК/1.0', 'НИЛЬЗЯ РКСОК/1.0']
 
 server = socket.create_server(('0.0.0.0', 3332))
 server.listen(1)
@@ -15,6 +19,9 @@ while True:
         data = conn.recv(1024)
         print(f'Received response: \n{data.decode("UTF-8")}')
         if not data:
-            print('Connection closedd')
+            print('Connection closed')
             conn.close()
             break
+        print(f'Ok, making response...')
+        conn.sendall(allow_or_not_list[0].encode("UTF-8")) # randint(0, 1)
+        print(f'Response send.')
