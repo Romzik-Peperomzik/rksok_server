@@ -22,7 +22,8 @@ try:
                 conn.close()
                 break
             print(f'Ok, making response...')
-            conn.sendall(allow_or_not_list[1].encode("UTF-8")) # randint(0, 1)
+            print(f'{allow_or_not_list[0]}', end='\n')
+            conn.sendall(allow_or_not_list[0].encode("UTF-8")) # randint(0, 1)
             print(f'Response send.')
 except KeyboardInterrupt:
     print('\nТы отключил сервер.')
