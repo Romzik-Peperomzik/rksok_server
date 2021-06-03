@@ -3,7 +3,7 @@ import asyncio
 import aiofiles
 import aiofiles.os
 from base64 import b64encode
-from os import remove
+
 
 PROTOCOL = "РКСОК/1.0"
 ENCODING = "UTF-8" 
@@ -28,13 +28,13 @@ class Server():
     def __init__(self):
         super(Server, self).__init__()
         self.users = []
-        self.socket = socket.create_server(("0.0.0.0", 3333))  # socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.validation_server_socket = socket.create_connection(('0.0.0.0', 3332))
         self.is_working = False
         self.main_loop = asyncio.new_event_loop()
 
     def set_up(self):
-        # self.socket.bind('localhost', 3333)
+        self.socket.bind(("0.0.0.0", 3333))
         self.socket.listen(5)
         self.socket.setblocking(False)
         print("Server is listening")
@@ -55,63 +55,49 @@ class Server():
             self.main_loop.create_task(self.listen_socket(user_socket))
 
     async def listen_socket(self, listened_socket=None):
-        while True:
-            if listened_socket:
-                print(listened_socket, end='\n')         
+        # while True:
+            if listened_socket: 
+                print(f'Состояние сокета в начале цикла: \n{listened_socket}\n\n')       
                 data = await self._recv_message(listened_socket)  # Данные от клиента(б).
                 parsed_data, verb = self.parse_response(data)  # Валиден ли запрос клиента.
 
-                if parsed_data.startswith('НИПОНЯЛ'):  # Невалидный запрос, отвечаем клиенту.
-                    await self.send_data(parsed_data)
-                    listened_socket.close()
+                if not verb:
+                    response = parsed_data
                                 
                 valid_body = self.get_validation_body(parsed_data)  # Формируем запрос на валидацию.
-                print(f'{valid_body.decode(ENCODING)}\n')
-                valid_response = await self.send_validation_request(self.validation_server_socket, valid_body)
-                print(valid_response)
+                valid_response = await self.send_validation_request(self.validation_server_socket, valid_body) 
+
                 if valid_response.startswith('МОЖНА'):
                     if verb == 'ЗОПИШИ':
-                        print('\nПытаюсь записать абонента в дб...')
                         response = await self.writing_new_user(parsed_data)
-                        await self.send_data(response)
-                        # listened_socket.close()
-                        break
 
                     elif verb == 'ОТДОВАЙ':
-                        print('\nПытаюсь найти абонента в дб...')   
-                        print(parsed_data)
+                        print(f'\nЗашёл в GET: {parsed_data}\n\n')
                         response = await self.get_user(parsed_data)
-                        await self.send_data(response)
-                        break
+                        print(f'\nВот ответ для клиента: {response}\n\n')
+                        
+                    elif verb == 'УДОЛИ':
+                        response = await self.deleting_user(parsed_data)      
 
-                    else:
-                        print('\nПытаюсь удалить абонента из дб...')
-                        response = await self.deleting_user(parsed_data)
-                        await self.send_data(response)
-                        break
+                await self.send_data(response)
 
     async def _recv_message(self, listened_socket: socket.socket) -> str:
-        message = b''
-        message += await self.main_loop.sock_recv(listened_socket, 1024)
-        if message is None:
-            return None        
+        message = await self.main_loop.sock_recv(listened_socket, 1024)
+        print(f'Данные полученные из сокета: \n{type(message)}\n\n')      
         return message.decode(ENCODING)
     
     async def send_data(self, raw_data):
         for user_socket in self.users:
-            try:
-                await self.main_loop.sock_sendall(user_socket, raw_data)
-                user_socket.close()
-            except (KeyError, UnicodeEncodeError, ConnectionError, ValueError) as exc:
-                raise SocketException(exc)
-
+            print(f'Пытаюсь отправить данные вот в этот сокет:\n{user_socket}\n\n')
+            await self.main_loop.sock_sendall(user_socket, raw_data)
+            print(f'\nОтправил?\n\n')
+            user_socket.close()        
+            
     async def send_validation_request(self, valid_sock, request_body: bytes) -> str:
-        try:
-            await self.main_loop.sock_sendall(valid_sock, request_body)
-            valid_response =  await self._recv_message(valid_sock)
-            return valid_response
-        except (KeyError, UnicodeEncodeError, ConnectionError, ValueError) as exc:
-                raise SocketException(exc)
+        await self.main_loop.sock_sendall(valid_sock, request_body)
+        valid_response =  await self._recv_message(valid_sock)
+        return valid_response
+        
 
     def parse_response(self, data: str) -> tuple:
         """Processing client response
@@ -125,9 +111,9 @@ class Server():
             if data.startswith(ru_verb):
                 break
         else:
-            return f'НИПОНЯЛ РКСОК/1.0'
+            return f'НИПОНЯЛ РКСОК/1.0'.encode(ENCODING), False
         if len(data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
-            return f'НИПОНЯЛ РКСОК/1.0'
+            return f'НИПОНЯЛ РКСОК/1.0'.encode(ENCODING), False
         return data, ru_verb
 
     def get_validation_body(self, decoded_data: str) -> bytes:
@@ -145,12 +131,9 @@ class Server():
                 data ([type]): Data from client response."""
         name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
         encode_name = b64encode(name.encode("UTF-8")).decode()
-        print(f'Имя пользователя в закодированном виде: {encode_name}')
         try:
             async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:            
                 user_data = await f.read()
-                print(user_data)
-
             return f'НОРМАЛДЫКС РКСОК/1.0\r\n{user_data}'.encode(ENCODING)
 
         except (FileExistsError, FileNotFoundError):
@@ -162,7 +145,6 @@ class Server():
                 data: Data from client response."""
         name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
         encode_name = b64encode(name.encode("UTF-8")).decode()
-        print(encode_name)
         try:
             async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
                 await f.write(''.join(data.split('\r\n', 1)[1]))
@@ -178,9 +160,8 @@ class Server():
                 data ([type]): Data from client response."""
         name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
         encode_name = b64encode(name.encode("UTF-8")).decode()
-        print(f'Имя пользователя в закодированном виде: {encode_name}')
+        # print(f'Имя пользователя в закодированном виде: {encode_name}')
         try:
-            print('Пытаюсь удалить пользователя.')
             await aiofiles.os.remove(f"db/{encode_name}")
 
             return f'НОРМАЛДЫКС РКСОК/1.0'.encode(ENCODING)
