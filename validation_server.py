@@ -7,7 +7,7 @@ from base64 import b64encode
 
 ENCODING = 'UTF-8'
 
-allow_or_not_list = ['МОЖНА РКСОК/1.0', 'НИЛЬЗЯ РКСОК/1.0\r\nУже едем']
+allow_or_not_list = ['МОЖНА РКСОК/1.0', 'НИЛЬЗЯ РКСОК/1.0\r\nЧто ещё за Иван Хмурый такой? Он тебе зачем?']
 
 
 async def handle_echo(reader, writer):
