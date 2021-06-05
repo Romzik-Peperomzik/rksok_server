@@ -16,7 +16,7 @@ ru_verbs_list = {"ОТДОВАЙ ": 'GET',
 
 async def validation_server_request(message: str) -> str:
     reader, writer = await asyncio.open_connection(
-        'vragi-vezde.to.digital', 51624)
+        'vragi-vezde.to.digital', 51624)  #  'localhost', 3334
     request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
     writer.write(request.encode())  # Отправляем в поток сообщение в бинарном виде.
     await writer.drain()  # Следит за переполнением буфера, придерживая отправку в поток.
@@ -52,6 +52,7 @@ async def get_user(data: str) -> str:
             data ([type]): Data from client response."""
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
+    print(f'Я тут!!!!!!!!!!!!!!!!{data}')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:            
             user_data = await f.read()
@@ -102,12 +103,12 @@ async def handle_echo(reader, writer):
         print(f'\nRequesting validation from validation server: {valid_response}\n') # проверки МОЖНА|НЕЛЬЗЯ
 
         if valid_response.startswith('МОЖНА'): # Распаршиваем запрос пользователя и пишем соотв. логику его запроса.
-            if response == 'ЗОПИШИ':
+            if response == 'ЗОПИШИ ':
                 response = await writing_new_user(message)
-            elif response == 'ОТДОВАЙ':
+            elif response == 'ОТДОВАЙ ':
                 print(f'\nЗашёл в GET с данными: {message}\n\n')
                 response = await get_user(message)               
-            elif response == 'УДОЛИ':
+            elif response == 'УДОЛИ ':
                 response = await deleting_user(message)
         else:
             # Сервер проверки запретил обрабатывать запрос, надо вернуть НИЛЬЗЯ + тело ответа сервера проверки.
@@ -122,7 +123,7 @@ async def handle_echo(reader, writer):
 
 async def main():
     server = await asyncio.start_server(
-        handle_echo, '10.166.0.2', 3389)   # Запускает сервер, вызывает handle_echo 
+        handle_echo, '10.166.0.2', 3389)  # localhost   # Запускает сервер, вызывает handle_echo 
                                           # всякий раз когда есть новое подключение.
     addr = server.sockets[0].getsockname()  # Просто показывает какой сокет обслуживает.
     print(f'Serving on {addr}\n')
