@@ -16,7 +16,7 @@ ru_verbs_list = {"ОТДОВАЙ ": 'GET',
 
 async def validation_server_request(message: str) -> str:
     reader, writer = await asyncio.open_connection(
-        'localhost', 3334)
+        'vragi-vezde.to.digital', 51624)
     request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
     writer.write(request.encode())  # Отправляем в поток сообщение в бинарном виде.
     await writer.drain()  # Следит за переполнением буфера, придерживая отправку в поток.
