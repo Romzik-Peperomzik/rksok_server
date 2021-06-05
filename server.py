@@ -52,7 +52,6 @@ async def get_user(data: str) -> str:
             data ([type]): Data from client response."""
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
-    print(f'Я тут!!!!!!!!!!!!!!!!{data}')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:            
             user_data = await f.read()
