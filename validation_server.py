@@ -16,9 +16,9 @@ async def handle_echo(reader, writer):
     addr = writer.get_extra_info('peername')  # Забирает из writer объекта инфо по ip и порту.
     print(f"\nReceived: \n{message!r}\nfrom {addr!r}")  # Печатаем что и от кого получили.
     print(f'Ok, making response...')
-    print(f'\n{allow_or_not_list[0]}', end='\n')
+    print(f'\n{allow_or_not_list[1]}', end='\n')
     
-    writer.write(allow_or_not_list[0].encode('utf-8'))  # Отправляет бинарные данные как ответ в подключенный сокет.
+    writer.write(allow_or_not_list[1].encode('utf-8'))  # Отправляет бинарные данные как ответ в подключенный сокет.
     await writer.drain()  # Следит за переполнением буфера, придерживая отправку в поток.
     print("Close the connection")
     writer.close()  # Закрывает поток запись (обрывает соединение с сокетом).

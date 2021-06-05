@@ -9,9 +9,9 @@ from typing import Optional
 PROTOCOL = "РКСОК/1.0"
 ENCODING = 'UTF-8'
 
-ru_verbs_list = {"ОТДОВАЙ": 'GET',
-                 "УДОЛИ": 'DELETE',
-                 "ЗОПИШИ": 'WRITE'}
+ru_verbs_list = {"ОТДОВАЙ ": 'GET',
+                 "УДОЛИ ": 'DELETE',
+                 "ЗОПИШИ ": 'WRITE'}
 
 
 async def validation_server_request(message: str) -> str:
@@ -31,6 +31,8 @@ async def validation_server_request(message: str) -> str:
 
 
 async def parse_client_request(message: str) -> str:
+    if not ' ' in message:
+        return f'НИПОНЯЛ РКСОК/1.0'
     if len(message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
         return f'НИПОНЯЛ РКСОК/1.0'  # Проверяем длину имени.
     if message.split('\r\n', 1)[0].rsplit(' ', 1)[1] != PROTOCOL:
@@ -120,7 +122,7 @@ async def handle_echo(reader, writer):
 
 async def main():
     server = await asyncio.start_server(
-        handle_echo, 'localhost', 3333)   # Запускает сервер, вызывает handle_echo 
+        handle_echo, '10.166.0.2', 3389)   # Запускает сервер, вызывает handle_echo 
                                           # всякий раз когда есть новое подключение.
     addr = server.sockets[0].getsockname()  # Просто показывает какой сокет обслуживает.
     print(f'Serving on {addr}\n')
