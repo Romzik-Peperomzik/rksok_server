@@ -73,8 +73,9 @@ async def writing_new_user(data: str) -> str:
         async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
         return f'НОРМАЛДЫКС РКСОК/1.0'
-    except FileExistsError:
+    except FileExistsError:        
         print('Кажется такой файл уже существует.')
+        return f'НОРМАЛДЫКС РКСОК/1.0'
 
 
 async def deleting_user(data: str) -> str:
