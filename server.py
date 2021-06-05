@@ -74,7 +74,8 @@ async def writing_new_user(data: str) -> str:
             await f.write(''.join(data.split('\r\n', 1)[1]))
         return f'НОРМАЛДЫКС РКСОК/1.0'
     except FileExistsError:        
-        print('Кажется такой файл уже существует.')
+        async with aiofiles.open(f"db/{encode_name}", 'w', encoding='utf-8') as f:
+            await f.write(''.join(data.split('\r\n', 1)[1]))
         return f'НОРМАЛДЫКС РКСОК/1.0'
 
 
