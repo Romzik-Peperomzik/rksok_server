@@ -87,7 +87,7 @@ async def deleting_user(data: str) -> str:
     try:
         await aiofiles.os.remove(f"db/{encode_name}")
         return f'НОРМАЛДЫКС РКСОК/1.0'
-    except FileExistsError:
+    except (FileExistsError, FileNotFoundError):
         return f'НИНАШОЛ РКСОК/1.0' 
 
 
