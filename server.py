@@ -5,7 +5,7 @@ from os import remove
 import time
 
 PROTOCOL = "РКСОК/1.0"
-ENCODING = "UTF-8" 
+ENCODING = "UTF-8"
 
 
 class CanNotParseResponseError(Exception):
@@ -18,7 +18,7 @@ ru_verbs_list = {"ОТДОВАЙ": 'GET',
                  "УДОЛИ": 'DELETE',
                  "ЗОПИШИ": 'WRITE'}
 
- 
+
 def parse_response(data: str) -> str:
     """ Processing client response
         Args:
@@ -26,7 +26,7 @@ def parse_response(data: str) -> str:
         Raises:
             CanNotParseResponseError: Ошибка если команду запроса неудалось обработать.
         Returns:
-            str: [description]"""    
+            str: [description]"""
     for ru_verb in ru_verbs_list:  # Узнаём какая именно команда пришла.
         if data.startswith(ru_verb):
             break
@@ -38,19 +38,19 @@ def parse_response(data: str) -> str:
     validation_request = get_validation_body(data)  # Формируем запрос для сервера проверки.
     validation_response = send_validation_request(validation_request)  # Идём узнавать у сервера проверки.
     print('\nОтвет от сервера валидации получен.')
-    
+
     if validation_response.startswith('МОЖНА'):
         if ru_verb == 'ЗОПИШИ':
-            print('\nПытаюсь записать абонента в дб...')            
+            print('\nПытаюсь записать абонента в дб...')
             return writing_new_user(data)
         elif ru_verb == 'ОТДОВАЙ':
-            print('\nПытаюсь найти абонента в дб...')            
+            print('\nПытаюсь найти абонента в дб...')
             return get_user(data)
         else:
             print('\nПытаюсь удалить абонента из дб...')
             return deleting_user(data)
-                
-    else:        
+
+    else:
         print(validation_response)
         return validation_response
 
@@ -78,13 +78,13 @@ def get_user(data) -> str:
     encode_name = b64encode(name.encode("UTF-8")).decode()
     print(f'Имя пользователя в закодированном виде: {encode_name}')
     try:
-        with open(f"db/{encode_name}", 'r', encoding='utf-8') as f:            
+        with open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = f.read()
             print(user_data)
         return f'НОРМАЛДЫКС РКСОК/1.0\r\n{user_data}'
     except FileExistsError:
         return f'НИНАШОЛ РКСОК/1.0'
-    
+
 
 def writing_new_user(data) -> None:
     """ Writing new userfile.
@@ -121,7 +121,7 @@ def send_validation_request(request_body: bytes) -> str:
     valid_conn = socket.create_connection(('0.0.0.0', 3332))  # ('vragi-vezde.to.digital', 51624)
     valid_conn.sendall(request_body)  # Отправляем запрос.
     valid_response = receive_validation_response(valid_conn)  # Ждём ответа от сервера.
-    return valid_response  
+    return valid_response
 
 
 def receive_validation_response(valid_conn) -> str:
@@ -156,7 +156,7 @@ def run_server() -> None:
     except KeyboardInterrupt:
         print('\nТы отключил сервер.')
         server.close()
-    
-    
+
+
 if __name__ == '__main__':
     run_server()
