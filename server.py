@@ -35,7 +35,7 @@ async def validation_server_request(message: str) -> str:
 
 
 async def parse_client_request(message: str) -> str:
-    """ Parsing client request and return ru_verb if request 
+    """ Parsing client request and return ru_verb if request
         could be processed or dnu_msg if not.
         Args:
             message (str): Client request
@@ -48,7 +48,7 @@ async def parse_client_request(message: str) -> str:
     if message.split('\r\n', 1)[0].rsplit(' ', 1)[1] != PROTOCOL:
         return DNU_MSG
 
-    for ru_verb in ru_verbs_list: 
+    for ru_verb in ru_verbs_list:
         if message.startswith(ru_verb):
             break
     else:
@@ -65,7 +65,7 @@ async def get_user(data: str) -> str:
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Taking name from request string.
     encode_name = b64encode(name.encode("UTF-8")).decode()
     try:
-        async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:            
+        async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
         return f'{NORMAL}\r\n{user_data}'
     except (FileExistsError, FileNotFoundError):
@@ -85,7 +85,7 @@ async def writing_new_user(data: str) -> str:
             await f.write(''.join(data.split('\r\n', 1)[1]))
         return NORMAL
     # If user already exist, just rewrite data.  
-    except FileExistsError:  
+    except FileExistsError:
         async with aiofiles.open(f"db/{encode_name}", 'w', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
         return NORMAL
@@ -125,13 +125,13 @@ async def handle_echo(reader, writer) -> None:
             if response == 'ЗОПИШИ ':
                 response = await writing_new_user(message)
             elif response == 'ОТДОВАЙ ':
-                response = await get_user(message)               
+                response = await get_user(message)
             elif response == 'УДОЛИ ':
                 response = await deleting_user(message)
         else:
             # If validation server not allow process client request.
-            response = valid_response       
-    
+            response = valid_response
+
     writer.write(response.encode('utf-8'))
     await writer.drain()
     print("\nClose the connection with client")
@@ -140,7 +140,7 @@ async def handle_echo(reader, writer) -> None:
 
 async def main():
     server = await asyncio.start_server(
-        handle_echo, '10.166.0.2', 3389) 
+        handle_echo, '0.0.0.0', 3389)
 
     addr = server.sockets[0].getsockname()
     print(f'Serving on {addr}\n')
