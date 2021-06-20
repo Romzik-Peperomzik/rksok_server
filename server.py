@@ -6,21 +6,22 @@ from base64 import b64encode
 
 PROTOCOL = "РКСОК/1.0"
 ENCODING = "UTF-8"
-DNU_MSG = "НИПОНЯЛ РКСОК/1.0"
-NORMAL = "НОРМАЛДЫКС РКСОК/1.0"
-NOT_FND = "НИНАШОЛ РКСОК/1.0"
 
-ru_verbs_list = {"ОТДОВАЙ ": 'GET',
-                 "УДОЛИ ": 'DELETE',
-                 "ЗОПИШИ ": 'WRITE'}
+request_verbs = {"ОТДОВАЙ ": "GET",
+                   "УДОЛИ ": "DELETE",
+                  "ЗОПИШИ ": "WRITE"}
 
+response_phrases = {"N_FND": "НИНАШОЛ РКСОК/1.0",
+                      "DNU": "НИПОНЯЛ РКСОК/1.0",
+                       "OK": "НОРМАЛДЫКС РКСОК/1.0"}
 
 async def validation_server_request(message: str) -> str:
     """ Requests validation server and return server response.
         Args:
-            message (str): Request from client
+            message: Request from client
         Returns:
-            str: Decoded response from validation server"""
+            str: Decoded response from validation server """
+
     reader, writer = await asyncio.open_connection(
         'vragi-vezde.to.digital', 51624)
     request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
@@ -35,41 +36,43 @@ async def validation_server_request(message: str) -> str:
 
 
 async def parse_client_request(message: str) -> str:
-    """ Parsing client request and return ru_verb if request
+    """ Parsing client request and return verb if request
         could be processed or dnu_msg if not.
         Args:
-            message (str): Client request
+            message: Client request
         Returns:
-            str: verb or dnu_msg"""
-    if not ' ' in message:
-        return DNU_MSG
-    if len(message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
-        return DNU_MSG
-    if message.split('\r\n', 1)[0].rsplit(' ', 1)[1] != PROTOCOL:
-        return DNU_MSG
+            str: verb or dnu_msg """
 
-    for ru_verb in ru_verbs_list:
-        if message.startswith(ru_verb):
-            break
+    if not ' ' in message:
+        return response_phrases[DNU]
+    if len(message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
+        return response_phrases[DNU]
+    if message.split('\r\n', 1)[0].rsplit(' ', 1)[1] != PROTOCOL:
+        return response_phrases[DNU]
+
+    for verb in request_verbs:
+        if message.startswith(verb):
+            break  # If find existing verb just break.
     else:
-        return DNU_MSG
-    return f'{ru_verb}'
+        return response_phrases[DNU]
+    return f'{verb}'
 
 
 async def get_user(data: str) -> str:
     """ Searching user into data base.
         Args:
-            data ([type]): Message from client response.
+            data: Message from client response.
         Returns:
-            str: Response with requested user or not found message"""
+            str: Response with requested user or not found message """
+
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Taking name from request string.
     encode_name = b64encode(name.encode("UTF-8")).decode()
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
-        return f'{NORMAL}\r\n{user_data}'
+        return f'{response_phrases[OK]}\r\n{user_data}'
     except (FileExistsError, FileNotFoundError):
-        return NOT_FND
+        return response_phrases[N_FND]
 
 
 async def writing_new_user(data: str) -> str:
@@ -77,41 +80,43 @@ async def writing_new_user(data: str) -> str:
         Args:
             data: Data from client response.
         Returns:
-            str: Ok message."""
+            str: Ok message. """
+
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
     try:
         async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return NORMAL
-    # If user already exist, just rewrite data.  
-    except FileExistsError:
+        return response_phrases[OK]
+    except FileExistsError:  # If user already exist, just rewrite data.  
         async with aiofiles.open(f"db/{encode_name}", 'w', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return NORMAL
+        return response_phrases[OK]
 
 
 async def deleting_user(data: str) -> str:
     """ Deleting user from data base.
         Args:
-            data ([type]): Data from client response.
+            data: Data from client response.
         Returns:
-            str: Ok message or not found."""
+            str: Response ok phrase or not found. """
+
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
     try:
         await aiofiles.os.remove(f"db/{encode_name}")
-        return NORMAL
+        return response_phrases[OK]
     except (FileExistsError, FileNotFoundError):
-        return NOT_FND
+        return response_phrases[N_FND]
 
 
 async def handle_echo(reader, writer) -> None:
     """ Await client respose and process it.
         Args:
-            reader ([type]): Stream to recieve any data from client.
-            writer ([type]): Stream to dispatch parsed and processed client data with 
-                verifying response from validation server to client."""
+            reader: Stream to recieve any data from client.
+            writer: Stream to dispatch parsed and processed client data with
+                    verifying response from validation server to client. """
+
     data = await reader.read(1024)
     message = data.decode()
     addr = writer.get_extra_info('peername')
@@ -128,8 +133,7 @@ async def handle_echo(reader, writer) -> None:
                 response = await get_user(message)
             elif response == 'УДОЛИ ':
                 response = await deleting_user(message)
-        else:
-            # If validation server not allow process client request.
+        else:  # If validation server not allow process client request.
             response = valid_response
 
     writer.write(response.encode('utf-8'))
@@ -138,7 +142,7 @@ async def handle_echo(reader, writer) -> None:
     writer.close()
 
 
-async def main():
+async def main() -> None:
     server = await asyncio.start_server(
         handle_echo, '0.0.0.0', 3389)
 
