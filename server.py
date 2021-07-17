@@ -20,8 +20,8 @@ async def validation_server_request(message: str) -> str:
         Args:
             message: Request from client
         Returns:
-            str: Decoded response from validation server """
-
+            str: Decoded response from validation server 
+    """
     reader, writer = await asyncio.open_connection(
         'vragi-vezde.to.digital', 51624)
     request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
@@ -41,20 +41,20 @@ async def parse_client_request(message: str) -> str:
         Args:
             message: Client request
         Returns:
-            str: verb or dnu_msg """
-
+            str: verb or dnu_msg 
+    """
     if not ' ' in message:
-        return response_phrases[DNU]
+        return response_phrases["DNU"]
     if len(message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
-        return response_phrases[DNU]
+        return response_phrases["DNU"]
     if message.split('\r\n', 1)[0].rsplit(' ', 1)[1] != PROTOCOL:
-        return response_phrases[DNU]
+        return response_phrases["DNU"]
 
     for verb in request_verbs:
         if message.startswith(verb):
             break  # If find existing verb just break.
     else:
-        return response_phrases[DNU]
+        return response_phrases["DNU"]
     return f'{verb}'
 
 
@@ -63,16 +63,16 @@ async def get_user(data: str) -> str:
         Args:
             data: Message from client response.
         Returns:
-            str: Response with requested user or not found message """
-
+            str: Response with requested user or not found message 
+    """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Taking name from request string.
     encode_name = b64encode(name.encode("UTF-8")).decode()
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
-        return f'{response_phrases[OK]}\r\n{user_data}'
+        return f'{response_phrases["OK"]}\r\n{user_data}'
     except (FileExistsError, FileNotFoundError):
-        return response_phrases[N_FND]
+        return response_phrases["N_FND"]
 
 
 async def writing_new_user(data: str) -> str:
@@ -80,18 +80,18 @@ async def writing_new_user(data: str) -> str:
         Args:
             data: Data from client response.
         Returns:
-            str: Ok message. """
-
+            str: Ok message. 
+    """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
     try:
         async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return response_phrases[OK]
+        return response_phrases["OK"]
     except FileExistsError:  # If user already exist, just rewrite data.  
         async with aiofiles.open(f"db/{encode_name}", 'w', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return response_phrases[OK]
+        return response_phrases["OK"]
 
 
 async def deleting_user(data: str) -> str:
@@ -99,15 +99,15 @@ async def deleting_user(data: str) -> str:
         Args:
             data: Data from client response.
         Returns:
-            str: Response ok phrase or not found. """
-
+            str: Response ok phrase or not found. 
+    """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
     try:
         await aiofiles.os.remove(f"db/{encode_name}")
-        return response_phrases[OK]
+        return response_phrases["OK"]
     except (FileExistsError, FileNotFoundError):
-        return response_phrases[N_FND]
+        return response_phrases["N_FND"]
 
 
 async def handle_echo(reader, writer) -> None:
@@ -115,8 +115,8 @@ async def handle_echo(reader, writer) -> None:
         Args:
             reader: Stream to recieve any data from client.
             writer: Stream to dispatch parsed and processed client data with
-                    verifying response from validation server to client. """
-
+                    verifying response from validation server to client. 
+    """
     data = await reader.read(1024)
     message = data.decode()
     addr = writer.get_extra_info('peername')
