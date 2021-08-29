@@ -138,7 +138,7 @@ async def handle_echo(reader, writer) -> None:
 
     writer.write(response.encode('utf-8'))
     await writer.drain()
-    print("\nClose the connection with client")
+    print("\nClose the connection with client\n\n")
     writer.close()
 
 
