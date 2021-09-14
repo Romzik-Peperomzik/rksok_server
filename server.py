@@ -29,7 +29,7 @@ async def validation_server_request(message: str) -> str:
     reader, writer = await asyncio.open_connection(
         'vragi-vezde.to.digital', 51624)
     request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
-    logger.debug(f'REQUEST_TO_VALID_SERVER:\r\n{request}')
+    logger.debug(f'\nREQUEST_TO_VALID_SERVER:\r\n{request}')
     writer.write(f"{request}\r\n\r\n".encode())
     await writer.drain()
 
@@ -37,8 +37,8 @@ async def validation_server_request(message: str) -> str:
     writer.close()
     await writer.wait_closed()
 
-    h_r_response = response.decode(ENCODING)
-    logger.debug(f'RESPONSE_FROM_VALID_SERVER:\r\n{h_r_response}')
+    # h_r_response = response.decode(ENCODING)
+    # logger.debug(f'RESPONSE_FROM_VALID_SERVER:\r\n{h_r_response}')
     return response.decode(ENCODING)
 
 
@@ -78,14 +78,14 @@ async def get_user(data: str) -> str:
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Taking name from request string.
     encode_name = b64encode(name.encode(ENCODING)).decode()
-    logger.debug(f'GET_USER_FROM_DB\r\n{name}\r\n{encode_name}')
+    logger.debug(f'\nGET_USER_FROM_DB\r\n{name}\r\n{encode_name}')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
-        logger.debug(f'GET_USER RESPONSE\r\n{response_phrases["OK"]}\r\n{user_data}')
-        return f'{response_phrases["OK"]}\r\n{user_data}'
+        logger.debug(f'\nGET_USER RESPONSE\r\n{response_phrases["OK"]}\r\n{user_data}')
+        return f'{response_phrases["OK"]}\r\n{user_data}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
-        return response_phrases["N_FND"]
+        return f'{response_phrases["N_FND"]}\r\n\r\n'
 
 
 async def writing_new_user(data: str) -> str:
@@ -99,16 +99,16 @@ async def writing_new_user(data: str) -> str:
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode(ENCODING)).decode()
-    logger.debug(f'WRITING_NEW_USER_NAME\r\n{name}\r\n{encode_name}')
-    logger.debug(f'WRITING_NEW_USER FULL DATA\r\n{data}')
+    logger.debug(f'\nWRITING_NEW_USER_NAME\r\n{name}\r\n{encode_name}')
+    logger.debug(f'\nWRITING_NEW_USER FULL DATA\r\n{data}')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return response_phrases["OK"]
+        return f'{response_phrases["OK"]}\r\n\r\n'
     except FileExistsError:  # If user already exist, just rewrite data.  
         async with aiofiles.open(f"db/{encode_name}", 'w', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return response_phrases["OK"]
+        return f'{response_phrases["OK"]}\r\n\r\n'
 
 
 async def deleting_user(data: str) -> str:
@@ -122,12 +122,12 @@ async def deleting_user(data: str) -> str:
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode(ENCODING)).decode()
-    logger.debug(f'DELETING_USER_NAME_ENCODE_NAME\r\n{name}\r\n{encode_name}')
+    logger.debug(f'\nDELETING_USER_NAME_ENCODE_NAME\r\n{name}\r\n{encode_name}')
     try:
         await remove(f"db/{encode_name}")
-        return response_phrases["OK"]
+        return f'{response_phrases["OK"]}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
-        return response_phrases["N_FND"]
+        return f'{response_phrases["N_FND"]}\r\n\r\n'
 
 
 async def handle_echo(reader, writer) -> None:
@@ -141,7 +141,7 @@ async def handle_echo(reader, writer) -> None:
     """
     data = await reader.readuntil(separator=b'\r\n\r\n')
     message = data.decode()
-    logger.debug(f'USER_REQUESTED_DATA:\r\n{message}')
+    logger.debug(f'\nUSER_REQUESTED_DATA:\r\n{message}')
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
 
@@ -159,8 +159,8 @@ async def handle_echo(reader, writer) -> None:
         else:  # If validation server not allow process client request.
             response = valid_response
 
-    logger.debug(f'RESPONSE_TO_NOT_VALID_REQUEST_FROM_CLIENT\r\n{response}')
-    writer.write(f"{response}\r\n\r\n".encode(ENCODING))
+    logger.debug(f'\nRESPONSE_RESPONSE_TO_CLIENT\r\n{response}')
+    writer.write(f"{response}".encode(ENCODING))
     await writer.drain()
     print("\nClose the connection with client\n\n")
     writer.close()
