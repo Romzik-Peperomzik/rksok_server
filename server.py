@@ -1,7 +1,7 @@
 """RKSOK protocol server. For token test"""
 import asyncio
 import aiofiles
-import aiofiles.os
+from aiofiles.os import remove
 from base64 import b64encode
 
 
@@ -15,23 +15,6 @@ request_verbs = {"ОТДОВАЙ ": "GET",
 response_phrases = {"N_FND": "НИНАШОЛ РКСОК/1.0",
                       "DNU": "НИПОНЯЛ РКСОК/1.0",
                        "OK": "НОРМАЛДЫКС РКСОК/1.0"}
-
-
-def some_function(foo: int, bar:int) -> int:
-    """Concatenate foo and bar.
-
-    Args:
-        foo (int): first number
-        bar (int): second number
-
-    Returns:
-        int: sum of foo and bar
-
-    """
-    foo = 1
-    bar = 2
-    foobar = foo + bar
-    return foobar
 
 
 async def validation_server_request(message: str) -> str:
@@ -49,7 +32,7 @@ async def validation_server_request(message: str) -> str:
     writer.write(request.encode())
     await writer.drain()
 
-    response = await reader.read(1024)
+    response = await reader.readuntil(separator=b'\r\n\r\n')
     writer.close()
     await writer.wait_closed()
 
@@ -133,7 +116,7 @@ async def deleting_user(data: str) -> str:
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
     try:
-        await aiofiles.os.remove(f"db/{encode_name}")
+        await remove(f"db/{encode_name}")
         return response_phrases["OK"]
     except (FileExistsError, FileNotFoundError):
         return response_phrases["N_FND"]
@@ -148,7 +131,7 @@ async def handle_echo(reader, writer) -> None:
                 verifying response from validation server to client. 
 
     """
-    data = await reader.read(1024)
+    data = await reader.readuntil(separator=b'\r\n\r\n')
     message = data.decode()
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
@@ -174,7 +157,7 @@ async def handle_echo(reader, writer) -> None:
 
 
 async def main() -> None:
-    """Start server and get new socket."""
+    """Start server and print addres of new connection."""
     server = await asyncio.start_server(
         handle_echo, '0.0.0.0', 3400)
 
