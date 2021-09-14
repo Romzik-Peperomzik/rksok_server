@@ -1,4 +1,4 @@
-"""RKSOK protocol server."""
+"""RKSOK protocol server. For token test"""
 import asyncio
 import aiofiles
 import aiofiles.os
@@ -6,7 +6,7 @@ from base64 import b64encode
 
 
 PROTOCOL = "РКСОК/1.0"
-ENCODING = "UTF-8"  
+ENCODING = "UTF-8"
 
 request_verbs = {"ОТДОВАЙ ": "GET",
                    "УДОЛИ ": "DELETE",
