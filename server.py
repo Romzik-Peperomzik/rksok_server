@@ -1,3 +1,4 @@
+"""RKSOK protocol server."""
 import asyncio
 import aiofiles
 import aiofiles.os
@@ -5,7 +6,7 @@ from base64 import b64encode
 
 
 PROTOCOL = "РКСОК/1.0"
-ENCODING = "UTF-8"
+ENCODING = "UTF-8"  
 
 request_verbs = {"ОТДОВАЙ ": "GET",
                    "УДОЛИ ": "DELETE",
@@ -15,12 +16,32 @@ response_phrases = {"N_FND": "НИНАШОЛ РКСОК/1.0",
                       "DNU": "НИПОНЯЛ РКСОК/1.0",
                        "OK": "НОРМАЛДЫКС РКСОК/1.0"}
 
+
+def some_function(foo: int, bar:int) -> int:
+    """Concatenate foo and bar.
+
+    Args:
+        foo (int): first number
+        bar (int): second number
+
+    Returns:
+        int: sum of foo and bar
+
+    """
+    foo = 1
+    bar = 2
+    foobar = foo + bar
+    return foobar
+
+
 async def validation_server_request(message: str) -> str:
-    """ Requests validation server and return server response.
-        Args:
-            message: Request from client
-        Returns:
-            str: Decoded response from validation server 
+    """Request validation server and return server response.
+
+    Args: 
+        message: Request from client
+    Returns: 
+        str: Decoded response from validation server
+
     """
     reader, writer = await asyncio.open_connection(
         'vragi-vezde.to.digital', 51624)
@@ -36,12 +57,14 @@ async def validation_server_request(message: str) -> str:
 
 
 async def parse_client_request(message: str) -> str:
-    """ Parsing client request and return verb if request
-        could be processed or dnu_msg if not.
-        Args:
-            message: Client request
-        Returns:
-            str: verb or dnu_msg 
+    """Parse client request and return verb if request could be processed or dnu_msg if not.
+
+    Args:
+        message (str): message from a client.
+
+    Returns:
+        str: response phrase to client.
+
     """
     if not ' ' in message:
         return response_phrases["DNU"]
@@ -59,11 +82,13 @@ async def parse_client_request(message: str) -> str:
 
 
 async def get_user(data: str) -> str:
-    """ Searching user into data base.
-        Args:
-            data: Message from client response.
-        Returns:
-            str: Response with requested user or not found message 
+    """Search user into data base.
+
+    Args:
+        data: Message from client response.
+    Returns:
+        str: Response with requested user or not found message.
+
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Taking name from request string.
     encode_name = b64encode(name.encode("UTF-8")).decode()
@@ -76,11 +101,13 @@ async def get_user(data: str) -> str:
 
 
 async def writing_new_user(data: str) -> str:
-    """ Writing new userfile.
-        Args:
-            data: Data from client response.
-        Returns:
-            str: Ok message. 
+    """Write new userfile.
+
+    Args:
+        data: Data from client response.
+    Returns:
+        str: Ok message. 
+
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
@@ -95,11 +122,13 @@ async def writing_new_user(data: str) -> str:
 
 
 async def deleting_user(data: str) -> str:
-    """ Deleting user from data base.
-        Args:
-            data: Data from client response.
-        Returns:
-            str: Response ok phrase or not found. 
+    """Delete user from data base.
+
+    Args:
+        data: Data from client response.
+    Returns:
+        str: Response ok phrase or not found. 
+
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode("UTF-8")).decode()
@@ -111,11 +140,13 @@ async def deleting_user(data: str) -> str:
 
 
 async def handle_echo(reader, writer) -> None:
-    """ Await client respose and process it.
-        Args:
-            reader: Stream to recieve any data from client.
-            writer: Stream to dispatch parsed and processed client data with
-                    verifying response from validation server to client. 
+    """Await client respose and process it.
+
+    Args:
+        reader: Stream to recieve any data from client.
+        writer: Stream to dispatch parsed and processed client data with
+                verifying response from validation server to client. 
+
     """
     data = await reader.read(1024)
     message = data.decode()
@@ -143,8 +174,9 @@ async def handle_echo(reader, writer) -> None:
 
 
 async def main() -> None:
+    """Start server and get new socket."""
     server = await asyncio.start_server(
-        handle_echo, '0.0.0.0', 3389)
+        handle_echo, '0.0.0.0', 3400)
 
     addr = server.sockets[0].getsockname()
     print(f'Serving on {addr}\n')
