@@ -1,9 +1,10 @@
 """RKSOK protocol server. For token test"""
 import asyncio
-from asyncio.exceptions import IncompleteReadError
+from logging import debug
 import aiofiles
 from aiofiles.os import remove
 from base64 import b64encode
+from loguru import logger
 
 
 PROTOCOL = "РКСОК/1.0"
@@ -134,6 +135,7 @@ async def handle_echo(reader, writer) -> None:
     """
     data = await reader.readline()
     message = data.decode()
+    logger.debug(message)
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
 
@@ -169,4 +171,5 @@ async def main() -> None:
 
 
 if __name__ == '__main__':
+    logger.add(debug.log, format="{time} {level} {message}")
     asyncio.run(main())

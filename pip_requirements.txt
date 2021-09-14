@@ -1,1 +1,14 @@
 aiofiles==0.7.0
+astroid==2.7.3
+colorama==0.4.4
+isort==5.9.3
+lazy-object-proxy==1.6.0
+loguru==0.5.3
+mccabe==0.6.1
+platformdirs==2.3.0
+pydocstyle==6.1.1
+pylint==2.10.2
+snowballstemmer==2.1.0
+toml==0.10.2
+win32-setctime==1.0.3
+wrapt==1.12.1
