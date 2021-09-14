@@ -1,5 +1,6 @@
 """RKSOK protocol server. For token test"""
 import asyncio
+from asyncio.exceptions import IncompleteReadError
 import aiofiles
 from aiofiles.os import remove
 from base64 import b64encode
@@ -32,7 +33,7 @@ async def validation_server_request(message: str) -> str:
     writer.write(request.encode())
     await writer.drain()
 
-    response = await reader.readuntil(separator=b'\r\n\r\n')
+    response = await reader.readline()
     writer.close()
     await writer.wait_closed()
 
@@ -131,7 +132,7 @@ async def handle_echo(reader, writer) -> None:
                 verifying response from validation server to client. 
 
     """
-    data = await reader.readuntil(separator=b'\r\n\r\n')
+    data = await reader.readline()
     message = data.decode()
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
@@ -159,7 +160,7 @@ async def handle_echo(reader, writer) -> None:
 async def main() -> None:
     """Start server and print addres of new connection."""
     server = await asyncio.start_server(
-        handle_echo, '0.0.0.0', 3400)
+        handle_echo, '0.0.0.0', 3900)
 
     addr = server.sockets[0].getsockname()
     print(f'Serving on {addr}\n')
