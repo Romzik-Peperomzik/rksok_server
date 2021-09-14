@@ -33,7 +33,7 @@ async def validation_server_request(message: str) -> str:
     writer.write(f"{request}\r\n\r\n".encode())
     await writer.drain()
 
-    response = await reader.readuntil('\r\n\r\n')
+    response = await reader.readuntil(separator=b'\r\n\r\n')
     writer.close()
     await writer.wait_closed()
 
@@ -139,7 +139,7 @@ async def handle_echo(reader, writer) -> None:
                 verifying response from validation server to client. 
 
     """
-    data = await reader.readuntil('\r\n\r\n')
+    data = await reader.readuntil(separator=b'\r\n\r\n')
     message = data.decode()
     logger.debug(f'USER_REQUESTED_DATA:\r\n{message}')
     addr = writer.get_extra_info('peername')
