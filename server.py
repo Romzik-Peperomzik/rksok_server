@@ -30,7 +30,7 @@ async def validation_server_request(message: str) -> str:
         'vragi-vezde.to.digital', 51624)
     request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
     logger.debug(request)  # State of request to server
-    writer.write(request.encode())
+    writer.write(f"{request}\r\n\r\n".encode())
     await writer.drain()
 
     response = await reader.readline()
@@ -154,7 +154,7 @@ async def handle_echo(reader, writer) -> None:
             response = valid_response
 
     logger.debug(response)  # State of not valid response from client 
-    writer.write(response.encode(ENCODING))
+    writer.write(f"{response}\r\n\r\n".encode(ENCODING))
     await writer.drain()
     print("\nClose the connection with client\n\n")
     writer.close()
