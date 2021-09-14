@@ -76,9 +76,11 @@ async def get_user(data: str) -> str:
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Taking name from request string.
     encode_name = b64encode(name.encode(ENCODING)).decode()
+    logger.debug(f'GET_USER\r\n{name}\r\n{encode_name}')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
+        logger.debug(f'GET_USER RESPONSE\r\n{response_phrases["OK"]}\r\n{user_data}')
         return f'{response_phrases["OK"]}\r\n{user_data}'
     except (FileExistsError, FileNotFoundError):
         return response_phrases["N_FND"]
@@ -95,6 +97,7 @@ async def writing_new_user(data: str) -> str:
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode(ENCODING)).decode()
+    logger.debug(f'WRITING_NEW_USER\r\n{name}\r\n{encode_name}')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
@@ -116,6 +119,7 @@ async def deleting_user(data: str) -> str:
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode(ENCODING)).decode()
+    logger.debug(f'DELETING_USER\r\n{name}\r\n{encode_name}')
     try:
         await remove(f"db/{encode_name}")
         return response_phrases["OK"]
