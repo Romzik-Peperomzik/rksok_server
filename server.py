@@ -34,10 +34,12 @@ async def validation_server_request(message: str) -> str:
     writer.write(f"{request}\r\n\r\n".encode())
     await writer.drain()
     
-    response = str()
-    while current_line != '\r\n':
+    response = b''
+    while True:
         current_line = await reader.readline()
         response += current_line
+        if current_line.decode() == '\r\n':
+            break
     # response = await reader.readuntil(separator=b'\r\n\r\n')
     writer.close()
     await writer.wait_closed()
@@ -144,10 +146,13 @@ async def handle_echo(reader, writer) -> None:
                 verifying response from validation server to client. 
 
     """
-    data = str()
-    while current_line != '\r\n':
+
+    data = b''
+    while True:
         current_line = await reader.readline()
         data += current_line
+        if current_line.decode() == '\r\n':
+            break
     # data = await reader.readuntil(separator=b'\r\n\r\n')
     message = data.decode()
     logger.debug(f'\nUSER_REQUESTED_DATA:\r\n{message}')
