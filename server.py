@@ -97,10 +97,12 @@ async def writing_new_user(data: str) -> str:
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode(ENCODING)).decode()
+    data_body = ''.join(data.split('\r\n', 1)[1])
     logger.debug(f'WRITING_NEW_USER\r\n{name}\r\n{encode_name}')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
+            logger.debug(f'WRITING_NEW_USER DATA\r\n{data_body}')
         return response_phrases["OK"]
     except FileExistsError:  # If user already exist, just rewrite data.  
         async with aiofiles.open(f"db/{encode_name}", 'w', encoding='utf-8') as f:
