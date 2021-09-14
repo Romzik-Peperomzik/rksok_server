@@ -10,9 +10,7 @@ from loguru import logger
 PROTOCOL = "РКСОК/1.0"
 ENCODING = "UTF-8"
 
-request_verbs = {"ОТДОВАЙ ": "GET",
-                   "УДОЛИ ": "DELETE",
-                  "ЗОПИШИ ": "WRITE"}
+request_verbs = ["ОТДОВАЙ ", "УДОЛИ ", "ЗОПИШИ "]
 
 response_phrases = {"N_FND": "НИНАШОЛ РКСОК/1.0",
                       "DNU": "НИПОНЯЛ РКСОК/1.0",
@@ -77,7 +75,7 @@ async def get_user(data: str) -> str:
 
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Taking name from request string.
-    encode_name = b64encode(name.encode("UTF-8")).decode()
+    encode_name = b64encode(name.encode(ENCODING)).decode()
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
@@ -96,7 +94,7 @@ async def writing_new_user(data: str) -> str:
 
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
-    encode_name = b64encode(name.encode("UTF-8")).decode()
+    encode_name = b64encode(name.encode(ENCODING)).decode()
     try:
         async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
@@ -117,7 +115,7 @@ async def deleting_user(data: str) -> str:
 
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
-    encode_name = b64encode(name.encode("UTF-8")).decode()
+    encode_name = b64encode(name.encode(ENCODING)).decode()
     try:
         await remove(f"db/{encode_name}")
         return response_phrases["OK"]
@@ -155,7 +153,8 @@ async def handle_echo(reader, writer) -> None:
         else:  # If validation server not allow process client request.
             response = valid_response
 
-    writer.write(response.encode('utf-8'))
+    logger.debug(response)  # State of not valid response from client 
+    writer.write(response.encode(ENCODING))
     await writer.drain()
     print("\nClose the connection with client\n\n")
     writer.close()
