@@ -31,6 +31,7 @@ async def validation_server_request(message: str) -> str:
     reader, writer = await asyncio.open_connection(
         'vragi-vezde.to.digital', 51624)
     request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
+    logger.debug(request)  # State of request to server
     writer.write(request.encode())
     await writer.drain()
 
@@ -135,13 +136,14 @@ async def handle_echo(reader, writer) -> None:
     """
     data = await reader.readline()
     message = data.decode()
-    logger.debug(message)
+    logger.debug(message)  # State of request message from client
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
 
     response = await parse_client_request(message)
     if not response.startswith('НИПОНЯЛ'):
         valid_response = await validation_server_request(message)
+        logger.debug(valid_response)  # State of response from server
 
         if valid_response.startswith('МОЖНА'):
             if response == 'ЗОПИШИ ':
@@ -171,5 +173,5 @@ async def main() -> None:
 
 
 if __name__ == '__main__':
-    logger.add(debug.log, format="{time} {level} {message}")
+    logger.add("debug.log", format="{time} {level} {message}")
     asyncio.run(main())
