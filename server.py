@@ -4,6 +4,7 @@ from logging import debug
 import aiofiles
 from aiofiles.os import remove
 from base64 import b64encode
+from asyncio.tasks import current_task
 from loguru import logger
 
 
@@ -32,8 +33,12 @@ async def validation_server_request(message: str) -> str:
     logger.debug(f'\nREQUEST_TO_VALID_SERVER:\r\n{request}')
     writer.write(f"{request}\r\n\r\n".encode())
     await writer.drain()
-
-    response = await reader.readuntil(separator=b'\r\n\r\n')
+    
+    response = str()
+    while current_line != '\r\n':
+        current_line = await reader.readline()
+        response += current_line
+    # response = await reader.readuntil(separator=b'\r\n\r\n')
     writer.close()
     await writer.wait_closed()
 
@@ -139,14 +144,20 @@ async def handle_echo(reader, writer) -> None:
                 verifying response from validation server to client. 
 
     """
-    data = await reader.readuntil(separator=b'\r\n\r\n')
+    data = str()
+    while current_line != '\r\n':
+        current_line = await reader.readline()
+        data += current_line
+    # data = await reader.readuntil(separator=b'\r\n\r\n')
     message = data.decode()
     logger.debug(f'\nUSER_REQUESTED_DATA:\r\n{message}')
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
 
     response = await parse_client_request(message)
-    if not response.startswith('НИПОНЯЛ'):
+    if response.startswith('НИПОНЯЛ'):
+        response = f'{response}\r\n\r\n'
+    else:
         valid_response = await validation_server_request(message)
 
         if valid_response.startswith('МОЖНА'):
@@ -159,7 +170,7 @@ async def handle_echo(reader, writer) -> None:
         else:  # If validation server not allow process client request.
             response = valid_response
 
-    logger.debug(f'\nRESPONSE_RESPONSE_TO_CLIENT\r\n{response}')
+    logger.debug(f'\nRESPONSE_TO_CLIENT\r\n{response}')
     writer.write(f"{response}".encode(ENCODING))
     await writer.drain()
     print("\nClose the connection with client\n\n")
