@@ -32,14 +32,13 @@ async def validation_server_request(message: str) -> str:
     writer.write(f"{request}\r\n\r\n".encode(ENCODING))
     await writer.drain()
 
-    # response = b''    
-    # while True:
-    #     line = await reader.readline()
-    #     response += line
-    #     if response.endswith(rb'\r\n\r\n'):
-    #         break
-    # logger.debug({response.decode(ENCODING)})
-    response = await reader.readuntil(separator=b'\r\n\r\n')
+    response = b''
+    while True:
+        line = await reader.readline()
+        response += line
+        if response.endswith(b'\r\n\r\n') or not line:
+            break
+    # response = await reader.readuntil(separator=b'\r\n\r\n')
     logger.debug(f'RESPONSE_FROM_VALID_SERVER:\r\n{response.decode(ENCODING)}\r\n\r\n')
     writer.close()
     await writer.wait_closed()
