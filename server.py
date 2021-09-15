@@ -32,23 +32,17 @@ async def validation_server_request(message: str) -> str:
     writer.write(f"{request}\r\n\r\n".encode(ENCODING))
     await writer.drain()
 
-    # response = b''
-    # while True:
-    #     line = await reader.readline()
-    #     response += line
-    #     if response.endswith(b'\r\n\r\n') or not line:
-    #         break
-    try:
-        response = await reader.readuntil(separator=b'\r\n\r\n')
-
-        logger.debug(f'\nRESPONSE_FROM_VALID_SERVER:\n{response.decode(ENCODING)}')
-        writer.close()
-        await writer.wait_closed()
-    except asyncio.streams.LimitOverrunError:
-        logger.debug(f'\nRESPONSE_FROM_VALID_SERVER:\n{response.decode(ENCODING)}')
-        writer.close()
-        await writer.wait_closed()
-
+    response = b''
+    while True:
+        line = await reader.read(1024)
+        response += line
+        if response.endswith(b'\r\n\r\n') or not line:
+            break
+    # response = await reader.readuntil(separator=b'\r\n\r\n')
+    logger.debug(f'\nRESPONSE_FROM_VALID_SERVER:\n{response.decode(ENCODING)}')
+    writer.close()
+    await writer.wait_closed()
+   
     return response.decode(ENCODING)
 
 
@@ -149,43 +143,37 @@ async def handle_echo(reader, writer) -> None:
                 verifying response from validation server to client. 
 
     """
-    # data = b''
-    # while True:
-    #     line = await reader.readline()
-    #     data += line
-    #     if data.endswith(b'\r\n\r\n') or not line:
-    #         break
-    try:
-        data = await reader.readuntil(separator=b'\r\n\r\n')
+    data = b''
+    while True:
+        line = await reader.read(1024)
+        data += line
+        if data.endswith(b'\r\n\r\n') or not line:
+            break   
+    # data = await reader.readuntil(separator=b'\r\n\r\n')
+    logger.debug(f'\nENCODED:\n{data}\nDECODED:\n{data.decode(ENCODING)}\n')
+    message = data.decode(ENCODING)
+    addr = writer.get_extra_info('peername')
+    print(f"Received: {message!r} \nfrom {addr!r}")
 
-        logger.debug(f'\nENCODED:\n{data}\nDECODED:\n{data.decode(ENCODING)}\n')
-        message = data.decode(ENCODING)
-        addr = writer.get_extra_info('peername')
-        print(f"Received: {message!r} \nfrom {addr!r}")
+    response = await parse_client_request(message)
+    if not response.startswith('НИПОНЯЛ'):
+        valid_response = await validation_server_request(message)
 
-        response = await parse_client_request(message)
-        if not response.startswith('НИПОНЯЛ'):
-            valid_response = await validation_server_request(message)
+        if valid_response.startswith('МОЖНА'):
+            if response == 'ЗОПИШИ ':
+                response = await writing_new_user(message)
+            elif response == 'ОТДОВАЙ ':
+                response = await get_user(message)
+            elif response == 'УДОЛИ ':
+                response = await deleting_user(message)
+        else:  # If validation server not allow process client request.
+            response = valid_response
 
-            if valid_response.startswith('МОЖНА'):
-                if response == 'ЗОПИШИ ':
-                    response = await writing_new_user(message)
-                elif response == 'ОТДОВАЙ ':
-                    response = await get_user(message)
-                elif response == 'УДОЛИ ':
-                    response = await deleting_user(message)
-            else:  # If validation server not allow process client request.
-                response = valid_response
-
-        logger.debug(f'\nRESPONSE_TO_CLIENT:\n{response}')
-        writer.write(f"{response}".encode(ENCODING))
-        await writer.drain()
-        print("\nClose the connection with client\n\n")
-        writer.close()    
-    except asyncio.streams.LimitOverrunError:
-        await writer.drain()
-        print("\nClose the connection with client\n\n")
-        writer.close()  
+    logger.debug(f'\nRESPONSE_TO_CLIENT:\n{response}')
+    writer.write(f"{response}".encode(ENCODING))
+    await writer.drain()
+    print("\nClose the connection with client\n\n")
+    writer.close()
 
 
 async def main() -> None:
