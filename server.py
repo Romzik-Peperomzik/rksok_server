@@ -82,12 +82,12 @@ async def get_user(data: str) -> str:
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Taking name from request string.
     encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
-    logger.debug(f'\nGET_USER_FROM_DB\n{name}\n{encode_name}')
+    logger.debug(f'\nGET_USER_FROM_DB\nNAME:{name}\nENCODED_NAME:{encode_name}\n')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
-        logger.debug(f'\nGET_USER RESPONSE\n{response_phrases["OK"]}\n{user_data}')
-        return f'{response_phrases["OK"]}\r\n{user_data}\r\n\r\n'
+        logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{response_phrases["OK"]}\n{user_data}')
+        return f'{response_phrases["OK"]}\r\n{user_data}'  # \r\n\r\n'
     except (FileExistsError, FileNotFoundError):
         return f'{response_phrases["N_FND"]}\r\n\r\n'
 
@@ -103,7 +103,7 @@ async def writing_new_user(data: str) -> str:
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
-    logger.debug(f'\nWRITING_NEW_USER_NAME\n{name}\n{encode_name}')
+    logger.debug(f'\nWRITING_NEW_USER_NAME\nNAME:{name}\nENCODED_NAME:{encode_name}\n')
     logger.debug(f'\nWRITING_NEW_USER FULL DATA\n{data}')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
