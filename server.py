@@ -29,7 +29,7 @@ async def validation_server_request(message: str) -> str:
         'vragi-vezde.to.digital', 51624)
     request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
     logger.debug(f'\nREQUEST_TO_VALID_SERVER:\r\n{request}')
-    writer.write(f"{request}\r\n\r\n".encode())
+    writer.write(f"{request}\r\n\r\n".encode(ENCODING))
     await writer.drain()
 
     
@@ -40,6 +40,8 @@ async def validation_server_request(message: str) -> str:
             break
         if line:
             response += line
+    # logger.debug({response.decode(ENCODING)})
+    logger.debug(f'RESPONSE_AFTER_FULL_READLINES:\r\n{response.decode(ENCODING)}\r\n\r\n')
     # response = await reader.readuntil(separator=b'\r\n\r\n')
     writer.close()
     await writer.wait_closed()
@@ -84,7 +86,7 @@ async def get_user(data: str) -> str:
 
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Taking name from request string.
-    encode_name = b64encode(name.encode(ENCODING)).decode()
+    encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
     logger.debug(f'\nGET_USER_FROM_DB\r\n{name}\r\n{encode_name}')
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
@@ -105,7 +107,7 @@ async def writing_new_user(data: str) -> str:
 
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
-    encode_name = b64encode(name.encode(ENCODING)).decode()
+    encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
     logger.debug(f'\nWRITING_NEW_USER_NAME\r\n{name}\r\n{encode_name}')
     logger.debug(f'\nWRITING_NEW_USER FULL DATA\r\n{data}')
     try:
@@ -128,7 +130,7 @@ async def deleting_user(data: str) -> str:
 
     """
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
-    encode_name = b64encode(name.encode(ENCODING)).decode()
+    encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
     logger.debug(f'\nDELETING_USER_NAME_ENCODE_NAME\r\n{name}\r\n{encode_name}')
     try:
         await remove(f"db/{encode_name}")
@@ -153,8 +155,9 @@ async def handle_echo(reader, writer) -> None:
             break
         if line:
             data += line
+    logger.debug(f'DATA_AFTER_FULL_READLINES:\r\n{data.decode(ENCODING)}\r\n\r\n')
     # data = await reader.readuntil(separator=b'\r\n\r\n')
-    message = data.decode()
+    message = data.decode(ENCODING)
     logger.debug(f'\nUSER_REQUESTED_DATA:\r\n{message}')
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
