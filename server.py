@@ -148,10 +148,10 @@ async def handle_echo(reader, writer) -> None:
     while True:
         line = await reader.readline()
         data += line
-        if data.endswith(rb'\r\n\r\n'):
+        if data.endswith(b'\r\n\r\n') or not line:
             break
     # data = await reader.readuntil(separator=b'\r\n\r\n')        
-    logger.debug(f'\nDECODED_N_ENCODED_USER_DATA:\r\n{data}\r\n{data.decode(ENCODING)}\r\n')
+    logger.debug(f'\nDECODED_N_ENCODED_USER_DATA:\r\nENCODED:\r\n{data}\r\nDECODED:\r\n{data.decode(ENCODING)}\r\n')
     message = data.decode(ENCODING)
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
