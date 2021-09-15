@@ -32,22 +32,18 @@ async def validation_server_request(message: str) -> str:
     writer.write(f"{request}\r\n\r\n".encode(ENCODING))
     await writer.drain()
 
-    
-    response = b''
-    while True:
-        line = await reader.readline()
-        if not line:
-            break
-        if line:
-            response += line
+    # response = b''    
+    # while True:
+    #     line = await reader.readline()
+    #     response += line
+    #     if response.endswith(rb'\r\n\r\n'):
+    #         break
     # logger.debug({response.decode(ENCODING)})
-    logger.debug(f'RESPONSE_AFTER_FULL_READLINES:\r\n{response.decode(ENCODING)}\r\n\r\n')
-    # response = await reader.readuntil(separator=b'\r\n\r\n')
+    response = await reader.readuntil(separator=b'\r\n\r\n')
+    logger.debug(f'RESPONSE_FROM_VALID_SERVER:\r\n{response.decode(ENCODING)}\r\n\r\n')
     writer.close()
     await writer.wait_closed()
 
-    # h_r_response = response.decode(ENCODING)
-    # logger.debug(f'RESPONSE_FROM_VALID_SERVER:\r\n{h_r_response}')
     return response.decode(ENCODING)
 
 
@@ -151,14 +147,12 @@ async def handle_echo(reader, writer) -> None:
     data = b''
     while True:
         line = await reader.readline()
-        if not line:
+        data += line
+        if data.endswith(rb'\r\n\r\n'):
             break
-        if line:
-            data += line
-    logger.debug(f'DATA_AFTER_FULL_READLINES:\r\n{data.decode(ENCODING)}\r\n\r\n')
-    # data = await reader.readuntil(separator=b'\r\n\r\n')
+    # data = await reader.readuntil(separator=b'\r\n\r\n')        
+    logger.debug(f'\nDECODED_N_ENCODED_USER_DATA:\r\n{data}\r\n{data.decode(ENCODING)}\r\n')
     message = data.decode(ENCODING)
-    logger.debug(f'\nUSER_REQUESTED_DATA:\r\n{message}')
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
 
