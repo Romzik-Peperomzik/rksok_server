@@ -1,10 +1,8 @@
 """RKSOK protocol server. For token test"""
 import asyncio
-from logging import debug
 import aiofiles
 from aiofiles.os import remove
 from base64 import b64encode
-from asyncio.tasks import current_task
 from loguru import logger
 
 
@@ -33,14 +31,8 @@ async def validation_server_request(message: str) -> str:
     logger.debug(f'\nREQUEST_TO_VALID_SERVER:\r\n{request}')
     writer.write(f"{request}\r\n\r\n".encode())
     await writer.drain()
-    
-    response = b''
-    while True:
-        current_line = await reader.readline()
-        response += current_line
-        if current_line.decode() == '\r\n':
-            break
-    # response = await reader.readuntil(separator=b'\r\n\r\n')
+
+    response = await reader.readuntil(separator=b'\r\n\r\n')
     writer.close()
     await writer.wait_closed()
 
@@ -60,17 +52,17 @@ async def parse_client_request(message: str) -> str:
 
     """
     if not ' ' in message:
-        return response_phrases["DNU"]
+        return f'{response_phrases["DNU"]}\r\n\r\n'
     if len(message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
-        return response_phrases["DNU"]
+        return f'{response_phrases["DNU"]}\r\n\r\n'
     if message.split('\r\n', 1)[0].rsplit(' ', 1)[1] != PROTOCOL:
-        return response_phrases["DNU"]
+        return f'{response_phrases["DNU"]}\r\n\r\n'
 
     for verb in request_verbs:
         if message.startswith(verb):
             break  # If find existing verb just break.
     else:
-        return response_phrases["DNU"]
+        return f'{response_phrases["DNU"]}\r\n\r\n'
     return f'{verb}'
 
 
@@ -146,23 +138,14 @@ async def handle_echo(reader, writer) -> None:
                 verifying response from validation server to client. 
 
     """
-
-    data = b''
-    while True:
-        current_line = await reader.readline()
-        data += current_line
-        if current_line.decode() == '\r\n':
-            break
-    # data = await reader.readuntil(separator=b'\r\n\r\n')
+    data = await reader.readuntil(separator=b'\r\n\r\n')
     message = data.decode()
     logger.debug(f'\nUSER_REQUESTED_DATA:\r\n{message}')
     addr = writer.get_extra_info('peername')
     print(f"Received: {message!r} \nfrom {addr!r}")
 
     response = await parse_client_request(message)
-    if response.startswith('НИПОНЯЛ'):
-        response = f'{response}\r\n\r\n'
-    else:
+    if not response.startswith('НИПОНЯЛ'):
         valid_response = await validation_server_request(message)
 
         if valid_response.startswith('МОЖНА'):
@@ -175,7 +158,7 @@ async def handle_echo(reader, writer) -> None:
         else:  # If validation server not allow process client request.
             response = valid_response
 
-    logger.debug(f'\nRESPONSE_TO_CLIENT\r\n{response}')
+    logger.debug(f'\nRESPONSE_RESPONSE_TO_CLIENT\r\n{response}')
     writer.write(f"{response}".encode(ENCODING))
     await writer.drain()
     print("\nClose the connection with client\n\n")
