@@ -38,10 +38,16 @@ async def validation_server_request(message: str) -> str:
     #     response += line
     #     if response.endswith(b'\r\n\r\n') or not line:
     #         break
-    response = await reader.readuntil(separator=b'\r\n\r\n')
-    logger.debug(f'\nRESPONSE_FROM_VALID_SERVER:\n{response.decode(ENCODING)}')
-    writer.close()
-    await writer.wait_closed()
+    try:
+        response = await reader.readuntil(separator=b'\r\n\r\n')
+
+        logger.debug(f'\nRESPONSE_FROM_VALID_SERVER:\n{response.decode(ENCODING)}')
+        writer.close()
+        await writer.wait_closed()
+    except asyncio.streams.LimitOverrunError:
+        logger.debug(f'\nRESPONSE_FROM_VALID_SERVER:\n{response.decode(ENCODING)}')
+        writer.close()
+        await writer.wait_closed()
 
     return response.decode(ENCODING)
 
@@ -87,7 +93,7 @@ async def get_user(data: str) -> str:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
         logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{response_phrases["OK"]}\n{user_data}')
-        return f'{response_phrases["OK"]}\r\n{user_data}'  # \r\n\r\n'
+        return f'{response_phrases["OK"]}\r\n{user_data}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
         return f'{response_phrases["N_FND"]}\r\n\r\n'
 
@@ -149,31 +155,37 @@ async def handle_echo(reader, writer) -> None:
     #     data += line
     #     if data.endswith(b'\r\n\r\n') or not line:
     #         break
-    data = await reader.readuntil(separator=b'\r\n\r\n')        
-    logger.debug(f'\nENCODED:\n{data}\nDECODED:\n{data.decode(ENCODING)}\n')
-    message = data.decode(ENCODING)
-    addr = writer.get_extra_info('peername')
-    print(f"Received: {message!r} \nfrom {addr!r}")
+    try:
+        data = await reader.readuntil(separator=b'\r\n\r\n')
 
-    response = await parse_client_request(message)
-    if not response.startswith('НИПОНЯЛ'):
-        valid_response = await validation_server_request(message)
+        logger.debug(f'\nENCODED:\n{data}\nDECODED:\n{data.decode(ENCODING)}\n')
+        message = data.decode(ENCODING)
+        addr = writer.get_extra_info('peername')
+        print(f"Received: {message!r} \nfrom {addr!r}")
 
-        if valid_response.startswith('МОЖНА'):
-            if response == 'ЗОПИШИ ':
-                response = await writing_new_user(message)
-            elif response == 'ОТДОВАЙ ':
-                response = await get_user(message)
-            elif response == 'УДОЛИ ':
-                response = await deleting_user(message)
-        else:  # If validation server not allow process client request.
-            response = valid_response
+        response = await parse_client_request(message)
+        if not response.startswith('НИПОНЯЛ'):
+            valid_response = await validation_server_request(message)
 
-    logger.debug(f'\nRESPONSE_TO_CLIENT:\n{response}')
-    writer.write(f"{response}".encode(ENCODING))
-    await writer.drain()
-    print("\nClose the connection with client\n\n")
-    writer.close()
+            if valid_response.startswith('МОЖНА'):
+                if response == 'ЗОПИШИ ':
+                    response = await writing_new_user(message)
+                elif response == 'ОТДОВАЙ ':
+                    response = await get_user(message)
+                elif response == 'УДОЛИ ':
+                    response = await deleting_user(message)
+            else:  # If validation server not allow process client request.
+                response = valid_response
+
+        logger.debug(f'\nRESPONSE_TO_CLIENT:\n{response}')
+        writer.write(f"{response}".encode(ENCODING))
+        await writer.drain()
+        print("\nClose the connection with client\n\n")
+        writer.close()    
+    except asyncio.streams.LimitOverrunError:
+        await writer.drain()
+        print("\nClose the connection with client\n\n")
+        writer.close()  
 
 
 async def main() -> None:
