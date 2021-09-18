@@ -1,4 +1,4 @@
-"""RKSOK protocol server. For token test"""
+"""RKSOK protocol server."""
 
 import sys
 import asyncio
@@ -35,7 +35,7 @@ async def get_user(data: str) -> str:
 
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
-            user_data = await f.read()            
+            user_data = await f.read()           
         logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{response_phrases["OK"]}\n{user_data}')
 
         return f'{response_phrases["OK"]}\r\n{user_data}\r\n\r\n'
@@ -81,7 +81,7 @@ async def deleting_user(data: str) -> str:
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Cut name from request string.
     encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
     logger.debug(f'\nDELETING_USER_NAME_ENCODE_NAME:\n{name}\n{encode_name}')
-
+    
     try:
         await remove(f"db/{encode_name}")
         return f'{response_phrases["OK"]}\r\n\r\n'
@@ -102,10 +102,9 @@ async def validation_server_request(message: str) -> str:
     reader, writer = await asyncio.open_connection(
         VALIDATION_SERVER_URL, VALIDATION_SERVER_PORT)
 
-    request = f"АМОЖНА? {PROTOCOL}\r\n{message}"    
+    request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
     writer.write(f"{request}\r\n\r\n".encode(ENCODING))
     await writer.drain()
-    logger.debug(f'\nREQUEST_TO_VALIDATION_SERVER:\n{request}')
 
     response = b''
     while True:  # reading all data from validation server by 1kb blocks
@@ -116,6 +115,7 @@ async def validation_server_request(message: str) -> str:
     
     writer.close()
     await writer.wait_closed()
+    logger.debug(f'\nREQUEST_TO_VALIDATION_SERVER:\n{request}')
     logger.debug(f'\nRESPONSE_FROM_VALIDATION_SERVER:\n{response.decode(ENCODING)}')
    
     return response.decode(ENCODING)
@@ -188,7 +188,7 @@ async def handle_echo(reader, writer) -> None:
 
 async def turn_on_server() -> None:
     """Start server and print address of new connection."""
-    addr, port = sys.argv[1], int(sys.argv[2])
+    addr, port = sys.argv[1], int(sys.argv[2])  # get address and port from command line arguments.
 
     server = await asyncio.start_server(
         handle_echo, addr, port)
