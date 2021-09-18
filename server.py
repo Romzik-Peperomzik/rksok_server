@@ -32,12 +32,10 @@ async def get_user(data: str) -> str:
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Cut name from request string.
     encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
     logger.debug(f'\nGET_USER_FROM_DB:\nNAME:{name}\nENCODED_NAME:{encode_name}\n')
-
     try:
         async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()           
         logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{response_phrases["OK"]}\n{user_data}')
-
         return f'{response_phrases["OK"]}\r\n{user_data}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
         return f'{response_phrases["N_FND"]}\r\n\r\n'
@@ -56,16 +54,13 @@ async def writing_new_user(data: str) -> str:
     encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
     logger.debug(f'\nWRITING_NEW_USER_NAME\nNAME:{name}\nENCODED_NAME:{encode_name}\n')
     logger.debug(f'\nWRITING_NEW_USER FULL DATA:\n{data}')
-
     try:
         async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-
         return f'{response_phrases["OK"]}\r\n\r\n'
     except FileExistsError:  # If user already exist, rewrite data.
         async with aiofiles.open(f"db/{encode_name}", 'w', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-
         return f'{response_phrases["OK"]}\r\n\r\n'
 
 
@@ -81,11 +76,9 @@ async def deleting_user(data: str) -> str:
     name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Cut name from request string.
     encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
     logger.debug(f'\nDELETING_USER_NAME_ENCODE_NAME:\n{name}\n{encode_name}')
-    
     try:
         await remove(f"db/{encode_name}")
         return f'{response_phrases["OK"]}\r\n\r\n'
-
     except (FileExistsError, FileNotFoundError):
         return f'{response_phrases["N_FND"]}\r\n\r\n'
 
@@ -105,14 +98,12 @@ async def validation_server_request(message: str) -> str:
     request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
     writer.write(f"{request}\r\n\r\n".encode(ENCODING))
     await writer.drain()
-
     response = b''
     while True:  # reading all data from validation server by 1kb blocks
         line = await reader.read(1024)
         response += line
         if response.endswith(b'\r\n\r\n') or not line:
             break
-    
     writer.close()
     await writer.wait_closed()
     logger.debug(f'\nREQUEST_TO_VALIDATION_SERVER:\n{request}')
@@ -151,8 +142,8 @@ async def handle_echo(reader, writer) -> None:
     """Await client response and process it.
 
     Args:
-        reader: Stream to recieve any data from client.
-        writer: Stream to dispatch parsed and processed client data. 
+        reader: A stream to recieve any data from client.
+        writer: A stream to dispatch parsed and processed client data. 
 
     """
     data = b''
@@ -160,8 +151,7 @@ async def handle_echo(reader, writer) -> None:
         line = await reader.read(1024)
         data += line
         if data.endswith(b'\r\n\r\n') or not line:
-            break   
-
+            break
     addr = writer.get_extra_info('peername')    
     message = data.decode(ENCODING)
     logger.debug(f'\nRECEIVED FROM: {addr}:\nENCODED:\n{data}\nDECODED:\n{message}\n')
@@ -192,7 +182,6 @@ async def turn_on_server() -> None:
 
     server = await asyncio.start_server(
         handle_echo, addr, port)
-
     print(f'Serving on {addr}\n')
     async with server:
         await server.serve_forever()
@@ -200,4 +189,7 @@ async def turn_on_server() -> None:
 
 if __name__ == '__main__':
     logger.add("debug.log", format="{time} {level} {message}")
-    asyncio.run(turn_on_server())
+    try:
+        asyncio.run(turn_on_server())
+    except KeyboardInterrupt:
+        print('\nKeyboard interrupt: Server shutdown!')
