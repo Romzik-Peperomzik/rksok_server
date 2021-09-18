@@ -1,29 +1,32 @@
-import socket
-from random import randint
+import asyncio
 
 
-allow_or_not_list = ['МОЖНА РКСОК/1.0', 'НИЛЬЗЯ РКСОК/1.0\r\nУже едем']
+ENCODING = 'UTF-8'
 
-server = socket.create_server(('0.0.0.0', 3332))
-server.listen(1)
-try:
-    while True:
-        print('Validation server waiting for connection')
-        iteration = 0
-        conn, addr = server.accept()
-        print('New validation request')
-        while True:
-            iteration += 1
-            print(f'{iteration}')
-            data = conn.recv(1024)
-            print(f'Received response: \n{data.decode("UTF-8")}')
-            if not data:
-                print('Connection closed')
-                conn.close()
-                break
-            print(f'Ok, making response...')
-            conn.sendall(allow_or_not_list[1].encode("UTF-8")) # randint(0, 1)
-            print(f'Response send.')
-except KeyboardInterrupt:
-    print('\nТы отключил сервер.')
-    server.close()
+allow_or_not_list = ['МОЖНА РКСОК/1.0', 'НИЛЬЗЯ РКСОК/1.0\r\nЧто ещё за Иван Хмурый такой? Он тебе зачем?']
+
+
+async def handle_echo(reader, writer):
+    data = await reader.read(1024)  # Читает n байт из reader объекта.
+    message = data.decode()
+    addr = writer.get_extra_info('peername')  # Забирает из writer объекта инфо по ip и порту.
+    print(f"\nReceived: \n{message!r}\nfrom {addr!r}")  # Печатаем что и от кого получили.
+    print(f'Ok, making response...')
+    print(f'\n{allow_or_not_list[0]}', end='\n')
+    
+    writer.write(allow_or_not_list[0].encode('utf-8'))  # Отправляет бинарные данные как ответ в подключенный сокет.
+    await writer.drain()  # Следит за переполнением буфера, придерживая отправку в поток.
+    print("Close the connection")
+    writer.close()  # Закрывает поток запись (обрывает соединение с сокетом).
+
+async def main():
+    server = await asyncio.start_server(
+        handle_echo, 'localhost', 3334)   # Запускает сервер, вызывает handle_echo 
+                                          # всякий раз когда есть новое подключение.
+    addr = server.sockets[0].getsockname()  # Просто показывает какой сокет обслуживает.
+    print('Validation server waiting for connection')
+    print(f'Serving on {addr}')
+    async with server:
+        await server.serve_forever()  # Позволяет объекту server принимать поключения.
+
+asyncio.run(main())  # Создаёт ивент луп, выполняет и управляет корутинами.

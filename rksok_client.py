@@ -5,26 +5,30 @@ from typing import Optional
 
 
 class NotSpecifiedIPOrPortError(Exception):
-    """ Error that occurs when there is not Server or Port
-        specified in command-line arguments."""
+    """Error that occurs when there is not Server or Port specified in
+    command-line arguments.
+    """
     pass
 
 
 class CanNotParseResponseError(Exception):
-    """ Error that occurs when we can not parse some strange
-        response from RKSOK server."""
+    """Error that occurs when we can not parse some strange
+    response from RKSOK server.
+    """
     pass
 
 
 class RequestVerb(Enum):
-    """Verbs specified in RKSOK specs for requests"""
+    """Verbs specified in RKSOK specs for requests."""
+
     GET = "ОТДОВАЙ"
     DELETE = "УДОЛИ"
     WRITE = "ЗОПИШИ"
 
 
 class ResponseStatus(Enum):
-    """Response statuses specified in RKSOK specs for responses"""
+    """Response statuses specified in RKSOK specs for responses."""
+
     OK = "НОРМАЛДЫКС"
     NOTFOUND = "НИНАШОЛ"
     NOT_APPROVED = "НИЛЬЗЯ"

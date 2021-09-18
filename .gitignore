@@ -1,2 +1,6 @@
 env/
 db/
+sock.py
+serv.py
+clnt.py
+.vscode/
