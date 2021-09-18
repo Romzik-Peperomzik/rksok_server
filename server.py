@@ -1,10 +1,12 @@
 """RKSOK protocol server."""
 
-import sys
 import asyncio
+from base64 import b64encode
+import sys
+import traceback
+
 import aiofiles
 from aiofiles.os import remove
-from base64 import b64encode
 from loguru import logger
 
 
@@ -13,7 +15,7 @@ ENCODING = "UTF-8"
 VALIDATION_SERVER_URL = "vragi-vezde.to.digital"
 VALIDATION_SERVER_PORT = 51624
 
-request_verbs = ["ОТДОВАЙ ", "УДОЛИ ", "ЗОПИШИ "]
+request_verbs = ("ОТДОВАЙ ", "УДОЛИ ", "ЗОПИШИ ")
 
 response_phrases = {"N_FND": "НИНАШОЛ РКСОК/1.0",
                       "DNU": "НИПОНЯЛ РКСОК/1.0",
@@ -25,7 +27,6 @@ def make_uniq_id(user_name: str) -> b64encode:
 
     Args:
         user_name (str): user name from request.
-
     Returns:
         b64encode: decoded user name id.
 
@@ -39,10 +40,9 @@ def cut_name(message: str) -> str:
 
     Args:
         message (str): message from client.
-
     Returns:
         str: cutted name.
-        
+
     """
     name = message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
     return name
@@ -69,7 +69,7 @@ async def get_user(data: str) -> str:
         return f'{response_phrases["N_FND"]}\r\n\r\n'
 
 
-async def writing_new_user(data: str) -> str:
+async def write_new_user(data: str) -> str:
     """Write new userfile.
 
     Args:
@@ -92,7 +92,7 @@ async def writing_new_user(data: str) -> str:
         return f'{response_phrases["OK"]}\r\n\r\n'
 
 
-async def deleting_user(data: str) -> str:
+async def delete_user(data: str) -> str:
     """Delete user from data base.
 
     Args:
@@ -140,7 +140,7 @@ async def validation_server_request(message: str) -> str:
     return response.decode(ENCODING)
 
 
-async def parse_client_request(message: str) -> str:
+def parse_client_request(message: str) -> str:
     """Parse client request and return verb if request could be 
     processed or Do_Not_Understand phrase if not.
 
@@ -166,7 +166,7 @@ async def parse_client_request(message: str) -> str:
     return f'{verb}'
 
 
-async def handle_echo(reader, writer) -> None:
+async def process_client_request(reader, writer) -> None:
     """Await client response and process it.
 
     Args:
@@ -184,17 +184,17 @@ async def handle_echo(reader, writer) -> None:
     message = data.decode(ENCODING)
     logger.debug(f'\nRECEIVED FROM: {addr}:\nENCODED:\n{data}\nDECODED:\n{message}\n')
 
-    response = await parse_client_request(message)
+    response = parse_client_request(message)
     if not response.startswith('НИПОНЯЛ'):
         valid_response = await validation_server_request(message)
 
         if valid_response.startswith('МОЖНА'):
             if response == 'ЗОПИШИ ':
-                response = await writing_new_user(message)
+                response = await write_new_user(message)
             elif response == 'ОТДОВАЙ ':
                 response = await get_user(message)
             elif response == 'УДОЛИ ':
-                response = await deleting_user(message)
+                response = await delete_user(message)
         else:  # If validation server not allow process client request.
             response = valid_response
 
@@ -209,7 +209,7 @@ async def turn_on_server() -> None:
     addr, port = sys.argv[1], int(sys.argv[2])  # get address and port from command line arguments.
 
     server = await asyncio.start_server(
-        handle_echo, addr, port)
+        process_client_request, addr, port)
     print(f'Serving on {addr}\n')
     async with server:
         await server.serve_forever()
@@ -221,3 +221,7 @@ if __name__ == '__main__':
         asyncio.run(turn_on_server())
     except KeyboardInterrupt:
         print('\nKeyboard interrupt: Server shutdown!')
+    except Exception:
+        tb = traceback.format_exc()
+        logger.critical(f"Traceback:\n{tb}")
+        pass
