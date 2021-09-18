@@ -1,8 +1,4 @@
-from random import randint
 import asyncio
-import aiofiles
-import aiofiles.os
-from base64 import b64encode
 
 
 ENCODING = 'UTF-8'
