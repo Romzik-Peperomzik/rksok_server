@@ -20,6 +20,34 @@ response_phrases = {"N_FND": "НИНАШОЛ РКСОК/1.0",
                        "OK": "НОРМАЛДЫКС РКСОК/1.0"}
 
 
+def make_uniq_id(user_name: str) -> b64encode:
+    """Make uniq user name id for data base file.
+
+    Args:
+        user_name (str): user name from request.
+
+    Returns:
+        b64encode: decoded user name id.
+
+    """
+    encoded_uniq_name = b64encode(user_name.encode(ENCODING)).decode(ENCODING)
+    return encoded_uniq_name
+
+
+def cut_name(message: str) -> str:
+    """Cut requestet user name from message from client.
+
+    Args:
+        message (str): message from client.
+
+    Returns:
+        str: cutted name.
+        
+    """
+    name = message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
+    return name
+
+
 async def get_user(data: str) -> str:
     """Search user into data base.
 
@@ -29,12 +57,12 @@ async def get_user(data: str) -> str:
         str: Response with requested user or not found message.
 
     """
-    name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Cut name from request string.
-    encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
-    logger.debug(f'\nGET_USER_FROM_DB:\nNAME:{name}\nENCODED_NAME:{encode_name}\n')
+    name = cut_name(data)
+    encoded_name = make_uniq_id(name)
+    logger.debug(f'\nGET_USER_FROM_DB:\nNAME:{name}\nENCODED_NAME:{encoded_name}\n')
     try:
-        async with aiofiles.open(f"db/{encode_name}", 'r', encoding='utf-8') as f:
-            user_data = await f.read()           
+        async with aiofiles.open(f"db/{encoded_name}", 'r', encoding='utf-8') as f:
+            user_data = await f.read()
         logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{response_phrases["OK"]}\n{user_data}')
         return f'{response_phrases["OK"]}\r\n{user_data}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
@@ -47,19 +75,19 @@ async def writing_new_user(data: str) -> str:
     Args:
         data: Data from client response.
     Returns:
-        str: Ok message. 
+        str: Ok message.
 
     """
-    name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
-    encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
-    logger.debug(f'\nWRITING_NEW_USER_NAME\nNAME:{name}\nENCODED_NAME:{encode_name}\n')
+    name = cut_name(data)
+    encoded_name = make_uniq_id(name)
+    logger.debug(f'\nWRITING_NEW_USER_NAME\nNAME:{name}\nENCODED_NAME:{encoded_name}\n')
     logger.debug(f'\nWRITING_NEW_USER FULL DATA:\n{data}')
     try:
-        async with aiofiles.open(f"db/{encode_name}", 'x', encoding='utf-8') as f:
+        async with aiofiles.open(f"db/{encoded_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
         return f'{response_phrases["OK"]}\r\n\r\n'
     except FileExistsError:  # If user already exist, rewrite data.
-        async with aiofiles.open(f"db/{encode_name}", 'w', encoding='utf-8') as f:
+        async with aiofiles.open(f"db/{encoded_name}", 'w', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
         return f'{response_phrases["OK"]}\r\n\r\n'
 
@@ -73,11 +101,11 @@ async def deleting_user(data: str) -> str:
         str: Response OK or Not Found phrase.
 
     """
-    name = data.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]  # Cut name from request string.
-    encode_name = b64encode(name.encode(ENCODING)).decode(ENCODING)
-    logger.debug(f'\nDELETING_USER_NAME_ENCODE_NAME:\n{name}\n{encode_name}')
+    name = cut_name(data)
+    encoded_name = make_uniq_id(name)
+    logger.debug(f'\nDELETING_USER_NAME_ENCODED_NAME:\n{name}\n{encoded_name}')
     try:
-        await remove(f"db/{encode_name}")
+        await remove(f"db/{encoded_name}")
         return f'{response_phrases["OK"]}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
         return f'{response_phrases["N_FND"]}\r\n\r\n'
@@ -86,9 +114,9 @@ async def deleting_user(data: str) -> str:
 async def validation_server_request(message: str) -> str:
     """Request to validation server and return server response.
 
-    Args: 
+    Args:
         message: Request from client.
-    Returns: 
+    Returns:
         str: Decoded response from validation server.
 
     """
