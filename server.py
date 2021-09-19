@@ -8,11 +8,12 @@ import traceback
 import aiofiles
 from aiofiles.os import remove
 from config import PROTOCOL, ENCODING, VALIDATION_SERVER_URL, \
-                   VALIDATION_SERVER_PORT, REQUEST_VERBS, RESPONSE_PHRASES
+                   VALIDATION_SERVER_PORT, REQUEST_VERBS, RESPONSE_PHRASES, \
+                   RequestVerb, ResponsePhrase
 from loguru import logger
 
 
-def make_uniq_id(user_name: str) -> b64encode:
+def make_uniq_id(user_name: str) -> str:
     """Make uniq user name id for data base file.
 
     Args:
@@ -53,10 +54,10 @@ async def get_user(data: str) -> str:
     try:
         async with aiofiles.open(f"db/{encoded_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
-        logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{RESPONSE_PHRASES["OK"]}\n{user_data}')
-        return f'{RESPONSE_PHRASES["OK"]}\r\n{user_data}\r\n\r\n'
+        logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{ResponsePhrase.OK}\n{user_data}')
+        return f'{ResponsePhrase.OK}\r\n{user_data}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
-        return f'{RESPONSE_PHRASES["N_FND"]}\r\n\r\n'
+        return f'{ResponsePhrase.N_FND}\r\n\r\n'
 
 
 async def write_new_user(data: str) -> str:
@@ -75,11 +76,11 @@ async def write_new_user(data: str) -> str:
     try:
         async with aiofiles.open(f"db/{encoded_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return f'{RESPONSE_PHRASES["OK"]}\r\n\r\n'
+        return f'{ResponsePhrase.OK}\r\n\r\n'
     except FileExistsError:  # If user already exist, rewrite data.
         async with aiofiles.open(f"db/{encoded_name}", 'w', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return f'{RESPONSE_PHRASES["OK"]}\r\n\r\n'
+        return f'{ResponsePhrase.OK}\r\n\r\n'
 
 
 async def delete_user(data: str) -> str:
@@ -96,9 +97,9 @@ async def delete_user(data: str) -> str:
     logger.debug(f'\nDELETING_USER_NAME_ENCODED_NAME:\n{name}\n{encoded_name}')
     try:
         await remove(f"db/{encoded_name}")
-        return f'{RESPONSE_PHRASES["OK"]}\r\n\r\n'
+        return f'{ResponsePhrase.OK}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
-        return f'{RESPONSE_PHRASES["N_FND"]}\r\n\r\n'
+        return f'{ResponsePhrase.N_FND}\r\n\r\n'
 
 
 async def validation_server_request(message: str) -> str:
@@ -136,27 +137,26 @@ def parse_client_request(message: str) -> str:
 
     Args:
         message (str): message from a client.
-
     Returns:
         str: response phrase to client.
 
     """
     if not ' ' in message:
-        return f'{RESPONSE_PHRASES["DNU"]}\r\n\r\n'  # Not any spacebars at message.
+        return f'{ResponsePhrase.DNU}\r\n\r\n'  # Not any spacebars at message.
     if len(message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
-        return f'{RESPONSE_PHRASES["DNU"]}\r\n\r\n'  # Lenght of response > 30.
+        return f'{ResponsePhrase.DNU}\r\n\r\n'  # Length of response > 30.
     if message.split('\r\n', 1)[0].rsplit(' ', 1)[1] != PROTOCOL:
-        return f'{RESPONSE_PHRASES["DNU"]}\r\n\r\n'  # Not correct protocol.
+        return f'{ResponsePhrase.DNU}\r\n\r\n'  # Not correct protocol.
 
     for verb in REQUEST_VERBS:
         if message.startswith(verb):
             break  # If found existing request verb.
     else:
-        return f'{RESPONSE_PHRASES["DNU"]}\r\n\r\n'  # Not found correct request verb.
+        return f'{ResponsePhrase.DNU}\r\n\r\n'  # Not found correct request verb.
     return verb
 
 
-async def process_client_request(reader, writer) -> None:
+async def process_client_request(reader, writer):
     """Await client response and process it.
 
     Args:
@@ -179,11 +179,11 @@ async def process_client_request(reader, writer) -> None:
         valid_response = await validation_server_request(message)
 
         if valid_response.startswith('МОЖНА'):
-            if response == 'ЗОПИШИ ':
+            if response == RequestVerb.WRITE:
                 response = await write_new_user(message)
-            elif response == 'ОТДОВАЙ ':
+            elif response == RequestVerb.GET:
                 response = await get_user(message)
-            elif response == 'УДОЛИ ':
+            elif response == RequestVerb.DELETE:
                 response = await delete_user(message)
         else:  # If validation server not allow process client request.
             response = valid_response
@@ -194,7 +194,7 @@ async def process_client_request(reader, writer) -> None:
     logger.debug(f'\nRESPONSE_TO_CLIENT:\n{response}')
 
 
-async def turn_on_server() -> None:
+async def turn_on_server():
     """Start server and print address of new connection."""
     addr, port = sys.argv[1], int(sys.argv[2])  # get address and port from command line arguments.
 
