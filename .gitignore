@@ -3,5 +3,6 @@ db/
 env/
 logs/
 __pycache__/
+test.py
 test_client.py
 validation_server.py

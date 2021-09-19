@@ -11,8 +11,9 @@ class RequestVerb(Enum):
 class ResponsePhrase(Enum):
     OK = "НОРМАЛДЫКС РКСОК/1.0"
     N_FND = "НИНАШОЛ РКСОК/1.0"
-    DNU = "НИПОНЯЛ РКСОК/1.0"    
+    DNU = "НИПОНЯЛ РКСОК/1.0"
     N_APPR = "НИЛЬЗЯ"
+    APPR = "МОЖНА"
 
 PROTOCOL = "РКСОК/1.0"
 ENCODING = "UTF-8"

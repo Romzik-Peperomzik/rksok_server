@@ -7,14 +7,13 @@ import traceback
 
 import aiofiles
 from aiofiles.os import remove
-from config import PROTOCOL, ENCODING, VALIDATION_SERVER_URL, \
-                   VALIDATION_SERVER_PORT, REQUEST_VERBS, RESPONSE_PHRASES, \
-                   RequestVerb, ResponsePhrase
+from config import PROTOCOL, ENCODING, VALIDATION_SERVER_URL,\
+                   VALIDATION_SERVER_PORT, RequestVerb, ResponsePhrase
 from loguru import logger
 
 
 def make_uniq_id(user_name: str) -> str:
-    """Make uniq user name id for data base file.
+    """Make uniq user name id for database file.
 
     Args:
         user_name (str): user name from request.
@@ -40,7 +39,7 @@ def cut_name(message: str) -> str:
 
 
 async def get_user(data: str) -> str:
-    """Search user into data base.
+    """Search user into database.
 
     Args:
         data: Message from client response.
@@ -54,10 +53,10 @@ async def get_user(data: str) -> str:
     try:
         async with aiofiles.open(f"db/{encoded_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
-        logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{ResponsePhrase.OK}\n{user_data}')
-        return f'{ResponsePhrase.OK}\r\n{user_data}\r\n\r\n'
+        logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{ResponsePhrase.OK.value}\n{user_data}')
+        return f'{ResponsePhrase.OK.value}\r\n{user_data}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
-        return f'{ResponsePhrase.N_FND}\r\n\r\n'
+        return f'{ResponsePhrase.N_FND.value}\r\n\r\n'
 
 
 async def write_new_user(data: str) -> str:
@@ -76,15 +75,15 @@ async def write_new_user(data: str) -> str:
     try:
         async with aiofiles.open(f"db/{encoded_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return f'{ResponsePhrase.OK}\r\n\r\n'
+        return f'{ResponsePhrase.OK.value}\r\n\r\n'
     except FileExistsError:  # If user already exist, rewrite data.
         async with aiofiles.open(f"db/{encoded_name}", 'w', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return f'{ResponsePhrase.OK}\r\n\r\n'
+        return f'{ResponsePhrase.OK.value}\r\n\r\n'
 
 
 async def delete_user(data: str) -> str:
-    """Delete user from data base.
+    """Delete user from database.
 
     Args:
         data: Data from client response.
@@ -97,9 +96,9 @@ async def delete_user(data: str) -> str:
     logger.debug(f'\nDELETING_USER_NAME_ENCODED_NAME:\n{name}\n{encoded_name}')
     try:
         await remove(f"db/{encoded_name}")
-        return f'{ResponsePhrase.OK}\r\n\r\n'
+        return f'{ResponsePhrase.OK.value}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
-        return f'{ResponsePhrase.N_FND}\r\n\r\n'
+        return f'{ResponsePhrase.N_FND.value}\r\n\r\n'
 
 
 async def validation_server_request(message: str) -> str:
@@ -142,17 +141,17 @@ def parse_client_request(message: str) -> str:
 
     """
     if not ' ' in message:
-        return f'{ResponsePhrase.DNU}\r\n\r\n'  # Not any spacebars at message.
+        return f'{ResponsePhrase.DNU.value}\r\n\r\n'  # Not any spacebars at message.
     if len(message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
-        return f'{ResponsePhrase.DNU}\r\n\r\n'  # Length of response > 30.
+        return f'{ResponsePhrase.DNU.value}\r\n\r\n'  # Length of response > 30.
     if message.split('\r\n', 1)[0].rsplit(' ', 1)[1] != PROTOCOL:
-        return f'{ResponsePhrase.DNU}\r\n\r\n'  # Not correct protocol.
+        return f'{ResponsePhrase.DNU.value}\r\n\r\n'  # Not correct protocol.
 
-    for verb in REQUEST_VERBS:
-        if message.startswith(verb):
+    for verb in RequestVerb:
+        if message.startswith(verb.value):
             break  # If found existing request verb.
     else:
-        return f'{ResponsePhrase.DNU}\r\n\r\n'  # Not found correct request verb.
+        return f'{ResponsePhrase.DNU.value}\r\n\r\n'  # Not found correct request verb.
     return verb
 
 
@@ -175,10 +174,10 @@ async def process_client_request(reader, writer):
     logger.debug(f'\nRECEIVED FROM: {addr}:\nENCODED:\n{data}\nDECODED:\n{message}\n')
 
     response = parse_client_request(message)
-    if not response.startswith('НИПОНЯЛ'):
+    if not response == f'{ResponsePhrase.DNU.value}\r\n\r\n':
         valid_response = await validation_server_request(message)
 
-        if valid_response.startswith('МОЖНА'):
+        if valid_response.startswith(ResponsePhrase.APPR.value):
             if response == RequestVerb.WRITE:
                 response = await write_new_user(message)
             elif response == RequestVerb.GET:
