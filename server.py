@@ -7,19 +7,9 @@ import traceback
 
 import aiofiles
 from aiofiles.os import remove
+from config import PROTOCOL, ENCODING, VALIDATION_SERVER_URL, \
+                   VALIDATION_SERVER_PORT, REQUEST_VERBS, RESPONSE_PHRASES
 from loguru import logger
-
-
-PROTOCOL = "РКСОК/1.0"
-ENCODING = "UTF-8"
-VALIDATION_SERVER_URL = "vragi-vezde.to.digital"
-VALIDATION_SERVER_PORT = 51624
-
-REQUEST_VERBS = ("ОТДОВАЙ ", "УДОЛИ ", "ЗОПИШИ ")
-
-RESPONSE_PHRASES = {"N_FND": "НИНАШОЛ РКСОК/1.0",
-                      "DNU": "НИПОНЯЛ РКСОК/1.0",
-                       "OK": "НОРМАЛДЫКС РКСОК/1.0"}
 
 
 def make_uniq_id(user_name: str) -> b64encode:

@@ -1,9 +1,6 @@
-env/
 db/
+env/
 logs/
-sock.py
-serv.py
-clnt.py
 .vscode/
 test_client.py
 validation_server.py
