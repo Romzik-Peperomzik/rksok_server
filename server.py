@@ -206,7 +206,7 @@ async def turn_on_server() -> None:
 
 
 if __name__ == '__main__':
-    logger.add("debug.log", format="{time} {level} {message}")
+    logger.add("logs/debug.log", format="{time} {level} {message}")
     try:
         asyncio.run(turn_on_server())
     except KeyboardInterrupt:
