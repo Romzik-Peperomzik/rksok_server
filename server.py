@@ -15,9 +15,9 @@ ENCODING = "UTF-8"
 VALIDATION_SERVER_URL = "vragi-vezde.to.digital"
 VALIDATION_SERVER_PORT = 51624
 
-request_verbs = ("ОТДОВАЙ ", "УДОЛИ ", "ЗОПИШИ ")
+REQUEST_VERBS = ("ОТДОВАЙ ", "УДОЛИ ", "ЗОПИШИ ")
 
-response_phrases = {"N_FND": "НИНАШОЛ РКСОК/1.0",
+RESPONSE_PHRASES = {"N_FND": "НИНАШОЛ РКСОК/1.0",
                       "DNU": "НИПОНЯЛ РКСОК/1.0",
                        "OK": "НОРМАЛДЫКС РКСОК/1.0"}
 
@@ -63,10 +63,10 @@ async def get_user(data: str) -> str:
     try:
         async with aiofiles.open(f"db/{encoded_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
-        logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{response_phrases["OK"]}\n{user_data}')
-        return f'{response_phrases["OK"]}\r\n{user_data}\r\n\r\n'
+        logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{RESPONSE_PHRASES["OK"]}\n{user_data}')
+        return f'{RESPONSE_PHRASES["OK"]}\r\n{user_data}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
-        return f'{response_phrases["N_FND"]}\r\n\r\n'
+        return f'{RESPONSE_PHRASES["N_FND"]}\r\n\r\n'
 
 
 async def write_new_user(data: str) -> str:
@@ -85,11 +85,11 @@ async def write_new_user(data: str) -> str:
     try:
         async with aiofiles.open(f"db/{encoded_name}", 'x', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return f'{response_phrases["OK"]}\r\n\r\n'
+        return f'{RESPONSE_PHRASES["OK"]}\r\n\r\n'
     except FileExistsError:  # If user already exist, rewrite data.
         async with aiofiles.open(f"db/{encoded_name}", 'w', encoding='utf-8') as f:
             await f.write(''.join(data.split('\r\n', 1)[1]))
-        return f'{response_phrases["OK"]}\r\n\r\n'
+        return f'{RESPONSE_PHRASES["OK"]}\r\n\r\n'
 
 
 async def delete_user(data: str) -> str:
@@ -106,9 +106,9 @@ async def delete_user(data: str) -> str:
     logger.debug(f'\nDELETING_USER_NAME_ENCODED_NAME:\n{name}\n{encoded_name}')
     try:
         await remove(f"db/{encoded_name}")
-        return f'{response_phrases["OK"]}\r\n\r\n'
+        return f'{RESPONSE_PHRASES["OK"]}\r\n\r\n'
     except (FileExistsError, FileNotFoundError):
-        return f'{response_phrases["N_FND"]}\r\n\r\n'
+        return f'{RESPONSE_PHRASES["N_FND"]}\r\n\r\n'
 
 
 async def validation_server_request(message: str) -> str:
@@ -152,18 +152,18 @@ def parse_client_request(message: str) -> str:
 
     """
     if not ' ' in message:
-        return f'{response_phrases["DNU"]}\r\n\r\n'  # Not any spacebars at message.
+        return f'{RESPONSE_PHRASES["DNU"]}\r\n\r\n'  # Not any spacebars at message.
     if len(message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]) > 30:
-        return f'{response_phrases["DNU"]}\r\n\r\n'  # Lenght of response > 30.
+        return f'{RESPONSE_PHRASES["DNU"]}\r\n\r\n'  # Lenght of response > 30.
     if message.split('\r\n', 1)[0].rsplit(' ', 1)[1] != PROTOCOL:
-        return f'{response_phrases["DNU"]}\r\n\r\n'  # Not correct protocol.
+        return f'{RESPONSE_PHRASES["DNU"]}\r\n\r\n'  # Not correct protocol.
 
-    for verb in request_verbs:
+    for verb in REQUEST_VERBS:
         if message.startswith(verb):
             break  # If found existing request verb.
     else:
-        return f'{response_phrases["DNU"]}\r\n\r\n'  # Not found correct request verb.
-    return f'{verb}'
+        return f'{RESPONSE_PHRASES["DNU"]}\r\n\r\n'  # Not found correct request verb.
+    return verb
 
 
 async def process_client_request(reader, writer) -> None:
