@@ -1,6 +1,7 @@
+.vscode/
 db/
 env/
 logs/
-.vscode/
+__pycache__/
 test_client.py
 validation_server.py
