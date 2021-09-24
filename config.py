@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class RequestVerb(Enum):
     """Verbs specified in RKSOK specs for requests."""
 
@@ -14,6 +15,7 @@ class ResponsePhrase(Enum):
     DNU = "НИПОНЯЛ РКСОК/1.0"
     N_APPR = "НИЛЬЗЯ"
     APPR = "МОЖНА"
+
 
 PROTOCOL = "РКСОК/1.0"
 ENCODING = "UTF-8"
