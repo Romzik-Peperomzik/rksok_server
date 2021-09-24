@@ -7,20 +7,21 @@ from config import PROTOCOL, ENCODING, VALIDATION_SERVER_URL, VALIDATION_SERVER_
 
 
 async def validation_server_request(message: str) -> str:
-    """Request to validation server and return server response.
+    """Sends request to validation server and return server response.
 
     Args:
-        message: Request from client.
+        message(str): Request from client.
     Returns:
-        str: Decoded response from validation server.
+        (str): Decoded response from validation server.
 
     """
     reader, writer = await asyncio.open_connection(
         VALIDATION_SERVER_URL, VALIDATION_SERVER_PORT)
 
-    request = f"АМОЖНА? {PROTOCOL}\r\n{message}"
-    writer.write(f"{request}\r\n\r\n".encode(ENCODING))
+    request = f"АМОЖНА? {PROTOCOL}\r\n{message}\r\n\r\n".encode(ENCODING)
+    writer.write(request)
     await writer.drain()
+
     response = b''
     while True:  # reading all data from validation server by 1kb blocks
         line = await reader.read(1024)

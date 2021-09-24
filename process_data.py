@@ -1,98 +1,74 @@
 """Process data from requests."""
 
-from base64 import b64encode
+from typing import Union
 
 import aiofiles
 from aiofiles.os import remove
 from loguru import logger
 
-from config import ENCODING, ResponsePhrase
+from config import ResponsePhrase
 
 
-def make_uniq_id(user_name: str) -> str:
-    """Make uniq user name id for database file.
 
-    Args:
-        user_name (str): user name from request.
-    Returns:
-        b64encode: decoded user name id.
-
-    """
-    encoded_uniq_name = b64encode(user_name.encode(ENCODING)).decode(ENCODING)
-    return encoded_uniq_name
-
-
-def cut_name(message: str) -> str:
-    """Cut requestet user name from message from client.
-
-    Args:
-        message (str): message from client.
-    Returns:
-        str: cutted name.
-
-    """
-    name = message.split('\r\n', 1)[0].rsplit(' ', 1)[0].split(' ', 1)[1]
-    return name
-
-
-async def get_user(data: str) -> str:
+async def get_user(name: str, encoded_name:str) -> Union[ResponsePhrase, tuple]:
     """Search user into database.
 
     Args:
-        data: Message from client response.
+        name(str): Name from client request.
+        encoded_name(str): Unique id based on encoded user name for file name.
     Returns:
-        str: Response with requested user or not found message.
-
+        Union[ResponsePhrase, tuple]: OK phrase and user_data from file.
+        
     """
-    name = cut_name(data)
-    encoded_name = make_uniq_id(name)
     logger.debug(f'\nGET_USER_FROM_DB:\nNAME:{name}\nENCODED_NAME:{encoded_name}\n')
     try:
         async with aiofiles.open(f"db/{encoded_name}", 'r', encoding='utf-8') as f:
             user_data = await f.read()
         logger.debug(f'\nGET_USER_RESPONSE_FULL_DATA:\n{ResponsePhrase.OK.value}\n{user_data}')
-        return f'{ResponsePhrase.OK.value}\r\n{user_data}\r\n\r\n'
+        return (ResponsePhrase.OK, user_data)
+
     except (FileExistsError, FileNotFoundError):
-        return f'{ResponsePhrase.N_FND.value}\r\n\r\n'
+        return ResponsePhrase.N_FND
 
 
-async def write_new_user(data: str) -> str:
+async def write_new_user(request_body: str, name: str, encoded_name: str) -> ResponsePhrase:
     """Write new userfile.
 
     Args:
-        data: Data from client response.
+        request_body(str): Body data from client response.
+        name(str): Name from client request.
+        encoded_name(str): Unique id for file name.
     Returns:
-        str: Ok message.
+        ResponsePhrase: OK phrase.
 
     """
-    name = cut_name(data)
-    encoded_name = make_uniq_id(name)
     logger.debug(f'\nWRITING_NEW_USER_NAME\nNAME:{name}\nENCODED_NAME:{encoded_name}\n')
-    logger.debug(f'\nWRITING_NEW_USER FULL DATA:\n{data}')
+    logger.debug(f'\nWRITING_NEW_USER_BODY:\n{request_body}')
     try:
         async with aiofiles.open(f"db/{encoded_name}", 'x', encoding='utf-8') as f:
-            await f.write(''.join(data.split('\r\n', 1)[1]))
-        return f'{ResponsePhrase.OK.value}\r\n\r\n'
-    except FileExistsError:  # If user already exist, rewrite data.
+            await f.write(request_body)
+        return ResponsePhrase.OK
+
+    except FileExistsError:  # If user already exist, rewrite message.
         async with aiofiles.open(f"db/{encoded_name}", 'w', encoding='utf-8') as f:
-            await f.write(''.join(data.split('\r\n', 1)[1]))
-        return f'{ResponsePhrase.OK.value}\r\n\r\n'
+            await f.write(request_body)
+        return ResponsePhrase.OK
 
 
-async def delete_user(data: str) -> str:
+async def delete_user(name: str, encoded_name:str) -> ResponsePhrase:
     """Delete user from database.
 
     Args:
-        data: Data from client response.
+        name(str): Name from client request.
+        encoded_name(str): Unique id for file name.
     Returns:
-        str: Response OK or Not Found phrase.
+        ResponsePhrase: OK or Not Found phrase.
 
     """
-    name = cut_name(data)
-    encoded_name = make_uniq_id(name)
     logger.debug(f'\nDELETING_USER_NAME_ENCODED_NAME:\n{name}\n{encoded_name}')
     try:
         await remove(f"db/{encoded_name}")
-        return f'{ResponsePhrase.OK.value}\r\n\r\n'
+        return ResponsePhrase.OK
+
     except (FileExistsError, FileNotFoundError):
-        return f'{ResponsePhrase.N_FND.value}\r\n\r\n'
+        return ResponsePhrase.N_FND
